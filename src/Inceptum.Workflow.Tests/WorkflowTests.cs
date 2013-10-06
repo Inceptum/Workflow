@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading;
 using Inceptum.Workflow;
 using Inceptum.Workflow.Fluent;
+using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
 namespace Inceptum.Workflow.Tests
@@ -13,10 +14,19 @@ namespace Inceptum.Workflow.Tests
     [TestFixture]
     public class WorkflowTests
     {
-        class TestActivity1 : TestActivity { }
-        class TestActivity2 : TestActivity { }
-        class TestActivity3 : TestActivity { }
-        class FailingTestActivity : TestActivity
+        private class TestActivity1 : TestActivity
+        {
+        }
+
+        private class TestActivity2 : TestActivity
+        {
+        }
+
+        private class TestActivity3 : TestActivity
+        {
+        }
+
+        private class FailingTestActivity : TestActivity
         {
             public override ActivityResult Execute(List<string> input, Action<List<string>> processOutput)
             {
@@ -24,7 +34,7 @@ namespace Inceptum.Workflow.Tests
             }
         }
 
-        class AsyncTestActivity : TestActivity
+        private class AsyncTestActivity : TestActivity
         {
             public override ActivityResult Execute(List<string> input, Action<List<string>> processOutput)
             {
@@ -37,7 +47,8 @@ namespace Inceptum.Workflow.Tests
             }
 
         }
-        class TestActivity : ActivityBase<List<string>, List<string>>
+
+        private class TestActivity : ActivityBase<List<string>, List<string>>
         {
 
             public ActivityResult Execute(List<string> context)
@@ -54,7 +65,7 @@ namespace Inceptum.Workflow.Tests
         }
 
 
-        class ValidateInputData : ActivityBase<Executable,Executable>
+        private class ValidateInputData : ActivityBase<Executable, Executable>
         {
             public override ActivityResult Execute(Executable input, Action<Executable> processOutput)
             {
@@ -64,7 +75,7 @@ namespace Inceptum.Workflow.Tests
         }
 
 
-        class GenerateConfirmationDocument : ActivityBase<Executable, Executable>
+        private class GenerateConfirmationDocument : ActivityBase<Executable, Executable>
         {
             public override ActivityResult Execute(Executable input, Action<Executable> processOutput)
             {
@@ -72,7 +83,7 @@ namespace Inceptum.Workflow.Tests
             }
         }
 
-        class CreateDiasDocument : ActivityBase<Executable, Executable>
+        private class CreateDiasDocument : ActivityBase<Executable, Executable>
         {
             private Executable m_Input;
 
@@ -85,7 +96,7 @@ namespace Inceptum.Workflow.Tests
 
             public override ActivityResult Resume<TClosure>(Action<Executable> processOutput, TClosure closure)
             {
-                if (closure is int && (int)(object)closure > 0)
+                if (closure is int && (int) (object) closure > 0)
                 {
                     Console.WriteLine("\tDias doc is received. Number is #" + closure);
 //context.DiasDoc = closure.ToString();
@@ -98,7 +109,7 @@ namespace Inceptum.Workflow.Tests
             }
         }
 
-        class CardDebit : ActivityBase<Executable, Executable>
+        private class CardDebit : ActivityBase<Executable, Executable>
         {
             public override ActivityResult Execute(Executable input, Action<Executable> processOutput)
             {
@@ -107,7 +118,7 @@ namespace Inceptum.Workflow.Tests
         }
 
 
-        class CardSettlement : ActivityBase<Executable, Executable>
+        private class CardSettlement : ActivityBase<Executable, Executable>
         {
             public override ActivityResult Execute(Executable input, Action<Executable> processOutput)
             {
@@ -116,7 +127,7 @@ namespace Inceptum.Workflow.Tests
         }
 
 
-        class GenerateProofDocument : ActivityBase<Executable, Executable>
+        private class GenerateProofDocument : ActivityBase<Executable, Executable>
         {
             public override ActivityResult Execute(Executable input, Action<Executable> processOutput)
             {
@@ -124,7 +135,7 @@ namespace Inceptum.Workflow.Tests
             }
         }
 
-        class NotefyAdmins : ActivityBase<Executable, Executable>
+        private class NotefyAdmins : ActivityBase<Executable, Executable>
         {
             public override ActivityResult Execute(Executable input, Action<Executable> processOutput)
             {
@@ -198,153 +209,187 @@ namespace Inceptum.Workflow.Tests
 
 
         [Test]
-        [ExpectedException(typeof(ConfigurationErrorsException), ExpectedMessage = "Node 'node1' references unknown node 'Not existing node'")]
+        [ExpectedException(typeof (ConfigurationErrorsException), ExpectedMessage = "Node 'node1' references unknown node 'Not existing node'")]
         public void InvalidEdgeValidationTest()
         {
             var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>());
-            wf.Configure(cfg => cfg.Do<TestActivity1,List<string>,List<string>>("node1", list => list, (input,output) => { }).ContinueWith("Not existing node"));
+            wf.Configure(
+                cfg => cfg.Do<TestActivity1, List<string>, List<string>>("node1", list => list, (input, output) => { }).ContinueWith("Not existing node"));
 
         }
 
         [Test]
-        [ExpectedException(typeof(ConfigurationErrorsException), ExpectedMessage = "Node 'node1' is not connected with any other node.")]
+        [ExpectedException(typeof (ConfigurationErrorsException), ExpectedMessage = "Node 'node1' is not connected with any other node.")]
         public void NotTerminatingNodeHasNoEdgesValidationTest()
         {
             var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>());
             wf.Configure(cfg =>
-                                cfg.Do<TestActivity1, List<string>, List<string>>("node1", list => list, (input, output) => { })
-                                   .WithBranch().Do<TestActivity2, List<string>, List<string>>("node2", list => list, (input, output) => { }).End());
+                cfg.Do<TestActivity1, List<string>, List<string>>("node1", list => list, (input, output) => { })
+                    .WithBranch().Do<TestActivity2, List<string>, List<string>>("node2", list => list, (input, output) => { }).End());
 
         }
 
-       
-                [Test]
-                public void StraightExecutionFlowTest()
+
+        [Test]
+        public void StraightExecutionFlowTest()
+        {
+            var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>());
+            wf.Configure(cfg => cfg
+                .Do<TestActivity1, List<string>, List<string>>("node1", list => list, (context, output) => context.Add("TestActivity1"))
+                .Do<TestActivity2, List<string>, List<string>>("node2", list => list, (context, output) => context.Add("TestActivity2"))
+                .End());
+            var wfContext = new List<string>();
+            var execution = wf.Run(wfContext);
+            Assert.That(execution.State, Is.EqualTo(WorkflowState.Complete));
+            Assert.That(wfContext, Is.EquivalentTo(new[] {"TestActivity1", "TestActivity2"}), "Wrong activities were executed");
+
+        }
+
+        [Test]
+        public void ExecutionFlowWithContextConditionsTest()
+        {
+            var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>());
+            int branchSelector = 0;
+            wf.Configure(cfg => cfg.Do<TestActivity1, List<string>, List<string>>("node1", list => list, (context, output) => context.Add("TestActivity1"))
+                .On("constraint1").DeterminedAs(list => branchSelector == 0).ContinueWith("node2")
+                .On("constraint2").DeterminedAs(list => branchSelector == 1).End()
+                .WithBranch().Do<TestActivity2, List<string>, List<string>>("node2", list => list, (context, output) => context.Add("TestActivity2")).End()
+                .WithBranch().Do<TestActivity3, List<string>, List<string>>("node3", list => list, (context, output) => context.Add("TestActivity3")).End());
+            var context0 = new List<string>();
+            var execution1 = wf.Run(context0);
+            var context1 = new List<string>();
+            branchSelector = 1;
+            var execution2 = wf.Run(context1);
+            Assert.That(execution1.State, Is.EqualTo(WorkflowState.Complete));
+            Assert.That(execution2.State, Is.EqualTo(WorkflowState.Complete));
+            Assert.That(context0, Is.EquivalentTo(new[] {"TestActivity1", "TestActivity2"}), "Wrong activities were executed");
+            Assert.That(context1, Is.EquivalentTo(new[] {"TestActivity1"}), "Wrong activities were executed");
+        }
+
+        [Test]
+        public void ExecutionFlowWithContextConditionAsFirstStepTest()
+        {
+            var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>());
+            int branchSelector = 0;
+            wf.Configure(cfg => cfg.On("constraint1").DeterminedAs(list => branchSelector == 0).ContinueWith("node2")
+                .On("constraint2").DeterminedAs(list => branchSelector == 1).End()
+                .WithBranch().Do<TestActivity2, List<string>, List<string>>("node2", list => list, (context, output) => context.Add("TestActivity2")).End()
+                .WithBranch().Do<TestActivity3, List<string>, List<string>>("node3", list => list, (context, output) => context.Add("TestActivity3")).End());
+            var context0 = new List<string>();
+            var execution1 = wf.Run(context0);
+            var context1 = new List<string>();
+            branchSelector = 1;
+            var execution2 = wf.Run(context1);
+            Assert.That(execution1.State, Is.EqualTo(WorkflowState.Complete));
+            Assert.That(execution2.State, Is.EqualTo(WorkflowState.Complete));
+            Assert.That(context0, Is.EquivalentTo(new[] {"TestActivity2"}), "Wrong activities were executed");
+            Assert.That(context1, Is.EquivalentTo(new string[0]), "Wrong activities were executed");
+        }
+
+        [Test]
+        public void OnFailTest()
+        {
+            var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>());
+            wf.Configure(cfg => cfg.Do<FailingTestActivity, List<string>, List<string>>("node1", list =>
+            {
+                list.Add("FailingTestActivity");
+                return list;
+            }, (context, output) => { }).OnFail("node2")
+                .WithBranch().Do<TestActivity2, List<string>, List<string>>("node2", list => list, (context, output) => context.Add("TestActivity2")).End());
+            var wfContext = new List<string>();
+            var execution = wf.Run(wfContext);
+            Assert.That(execution.State, Is.EqualTo(WorkflowState.Complete));
+            Assert.That(wfContext, Is.EquivalentTo(new[] {"FailingTestActivity", "TestActivity2"}));
+        }
+
+
+        [Test]
+        public void ResumeTest()
+        {
+            var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>());
+            wf.Configure(cfg => cfg
+                .Do<TestActivity1, List<string>, List<string>>("node1", list => list, (context, output) => context.Add("TestActivity1"))
+                .Do<AsyncTestActivity, List<string>, List<string>>("node2", list =>
                 {
-                    var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>());
-                    wf.Configure(cfg => cfg
-                        .Do<TestActivity1, List<string>, List<string>>("node1", list => list, (context, output) => context.Add("TestActivity1"))
-                        .Do<TestActivity2, List<string>, List<string>>("node2", list => list, (context, output) => context.Add("TestActivity2"))
-                        .End());
-                    var wfContext = new List<string>();
-                    var execution = wf.Run(wfContext);
-                    Assert.That(execution.State, Is.EqualTo(WorkflowState.Complete));
-                    Assert.That(wfContext, Is.EquivalentTo(new[] { "TestActivity1", "TestActivity2" }), "Wrong activities were executed");
+                    list.Add("AsyncTestActivity");
+                    return list;
+                }, (context, output) => { })
+                .Do<TestActivity3, List<string>, List<string>>("node3", list => list, (context, output) => context.Add("TestActivity3"))
+                .End());
+            var wfContext = new List<string>();
+            var execution = wf.Run(wfContext);
+            Assert.That(execution.State, Is.EqualTo(WorkflowState.InProgress), "Execution was not paused when async activity returned Pednding status");
+            Assert.That(wfContext, Is.EquivalentTo(new[] {"TestActivity1", "AsyncTestActivity"}), "Wrong activities were executed");
 
-                }
- 
-                [Test]
-                public void ExecutionFlowWithContextConditionsTest()
+            execution = wf.Resume(wfContext, new {message = "йа - кложурка!!!"});
+            Assert.That(execution.State, Is.EqualTo(WorkflowState.Complete),
+                "Execution was not complete after async activity was successfully resumed and returned Succeeded status");
+            Assert.That(wfContext, Is.EquivalentTo(new[] {"TestActivity1", "AsyncTestActivity", "TestActivity3"}), "Wrong activities were executed");
+
+        }
+
+        [Test]
+        public void ResumeFromTest()
+        {
+            var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>());
+/*
+                    wf.Configure(cfg => cfg.Do("Проверка входных данных").Do("Генерация документа на подпись")
+                                 .On("Карточный счет").ContinueWith("Списание с карты")
+                                 .On("Текущий   счет").ContinueWith("Обращение в диас")
+                             .WithBranch().Do("Генерация документа").OnFail("Уведомить админов").End()
+                             .WithBranch().Do("Списание с карты").Do("исполнение документа в диасофт").Do("создание проводки в 3card").OnFail("Уведомить админов").ContinueWith("Генерация документа")
+                             .WithBranch().Do("Обращение в диас").ContinueWith("Генерация документа")
+                             .WithBranch().Do("Уведомить админов").End(),
+                             Node.Named("Проверка входных данных").Takes(List => list).ProcessResult((o, r) => o.Add("TestActivity1")).With<TestActivity>()
+                             );*/
+            wf.Configure(cfg => cfg
+                .Do<TestActivity1, List<string>, List<string>>("node1", list => list, (context, output) => context.Add("TestActivity1"))
+                .Do<AsyncTestActivity, List<string>, List<string>>("node2", list =>
                 {
-                    var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>());
-                    int branchSelector = 0;
-                    wf.Configure(cfg => cfg.Do<TestActivity1, List<string>, List<string>>("node1", list => list, (context, output) => context.Add("TestActivity1"))
-                                                .On("constraint1").DeterminedAs(list => branchSelector == 0).ContinueWith("node2")
-                                                .On("constraint2").DeterminedAs(list => branchSelector == 1).End()
-                                            .WithBranch().Do<TestActivity2, List<string>, List<string>>("node2", list => list, (context, output) => context.Add("TestActivity2")).End()
-                                            .WithBranch().Do<TestActivity3, List<string>, List<string>>("node3", list => list, (context, output) => context.Add("TestActivity3")).End());
-                    var context0 = new List<string>();
-                    var execution1 = wf.Run(context0);
-                    var context1 = new List<string>();
-                    branchSelector = 1;
-                    var execution2 = wf.Run(context1);
-                    Assert.That(execution1.State, Is.EqualTo(WorkflowState.Complete));
-                    Assert.That(execution2.State, Is.EqualTo(WorkflowState.Complete));
-                    Assert.That(context0, Is.EquivalentTo(new[] { "TestActivity1", "TestActivity2" }), "Wrong activities were executed");
-                    Assert.That(context1, Is.EquivalentTo(new[] { "TestActivity1" }), "Wrong activities were executed");
-                }
+                    list.Add("AsyncTestActivity");
+                    return list;
+                }, (context, output) => { })
+                .Do<TestActivity3, List<string>, List<string>>("node3", list => list, (context, output) => context.Add("TestActivity3"))
+                .Do<TestActivity1, List<string>, List<string>>("node4", list => list, (context, output) => context.Add("TestActivity2"))
+                .End());
+            var wfContext = new List<string>();
+            var execution = wf.Run(wfContext);
+            Assert.That(execution.State, Is.EqualTo(WorkflowState.InProgress), "Execution was not paused when async activity returned Pednding status");
+            Assert.That(wfContext, Is.EquivalentTo(new[] {"TestActivity1", "AsyncTestActivity"}), "Wrong activities were executed");
 
-                [Test]
-                public void ExecutionFlowWithContextConditionAsFirstStepTest()
-                {
-                    var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>());
-                    int branchSelector = 0;
-                    wf.Configure(cfg => cfg.On("constraint1").DeterminedAs(list => branchSelector == 0).ContinueWith("node2")
-                                                .On("constraint2").DeterminedAs(list => branchSelector == 1).End()
-                                            .WithBranch().Do<TestActivity2, List<string>, List<string>>("node2", list => list, (context, output) => context.Add("TestActivity2")).End()
-                                            .WithBranch().Do<TestActivity3, List<string>, List<string>>("node3", list => list, (context, output) => context.Add("TestActivity3")).End());
-                    var context0 = new List<string>();
-                    var execution1 = wf.Run(context0);
-                    var context1 = new List<string>();
-                    branchSelector = 1;
-                    var execution2 = wf.Run(context1);
-                    Assert.That(execution1.State, Is.EqualTo(WorkflowState.Complete));
-                    Assert.That(execution2.State, Is.EqualTo(WorkflowState.Complete));
-                    Assert.That(context0, Is.EquivalentTo(new[] { "TestActivity2" }), "Wrong activities were executed");
-                    Assert.That(context1, Is.EquivalentTo(new string[0]), "Wrong activities were executed");
-                }
+            execution = wf.ResumeFrom(wfContext, "node4");
+            Assert.That(execution.State, Is.EqualTo(WorkflowState.Complete),
+                "Execution was not complete after async activity was successfully resumed and returned Succeeded status");
+            Assert.That(wfContext, Is.EquivalentTo(new[] {"TestActivity1", "AsyncTestActivity", "TestActivity2"}), "Wrong activities were executed");
 
-                [Test]
-                public void OnFailTest()
-                {
-                    var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>());
-                    wf.Configure(cfg => cfg.Do<FailingTestActivity, List<string>, List<string>>("node1", list => { list.Add("FailingTestActivity");return list;}, (context, output) =>{}).OnFail("node2")
-                                            .WithBranch().Do<TestActivity2, List<string>, List<string>>("node2", list => list, (context, output) => context.Add("TestActivity2")).End());
-                    var wfContext = new List<string>();
-                    var execution = wf.Run(wfContext);
-                    Assert.That(execution.State, Is.EqualTo(WorkflowState.Complete));
-                    Assert.That(wfContext, Is.EquivalentTo(new[] { "FailingTestActivity", "TestActivity2" }));
-                }
+        }
 
+        [Test]
+        public void GenericActivityTest()
+        {
+          
+            FakeExecutor executor = new FakeExecutor();
 
-                [Test]
-                public void ResumeTest()
-                {
-                    var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>());
-                    wf.Configure(cfg => cfg
-                        .Do<TestActivity1, List<string>, List<string>>("node1", list => list, (context, output) => context.Add("TestActivity1"))
-                        .Do<AsyncTestActivity, List<string>, List<string>>("node2", list => { list.Add("AsyncTestActivity"); return list; }, (context, output) => {})
-                        .Do<TestActivity3, List<string>, List<string>>("node3", list => list, (context, output) => context.Add("TestActivity3"))
-                        .End());
-                    var wfContext = new List<string>();
-                    var execution = wf.Run(wfContext);
-                    Assert.That(execution.State, Is.EqualTo(WorkflowState.InProgress), "Execution was not paused when async activity returned Pednding status");
-                    Assert.That(wfContext, Is.EquivalentTo(new[] { "TestActivity1", "AsyncTestActivity" }), "Wrong activities were executed");
+            var wf = new Workflow<dynamic>("", new InMemoryPersister<dynamic>(), activityExecutor: executor);
+            wf.Configure(cfg => cfg
+                .Do("CardPayActivity", "Pay", o => new {o.CardNumber}, (o, output) => o.IsPayed = output.IsPayed)
+                .Do("SendSmsActivity", "SendSMS", o => new {o.Phone}, (o, output) => o.IsSmsSent = output.IsSmsSent)
+                .End());
+            dynamic wfContext = new JObject();
+            wfContext.CardNumber = "1234 2546 7897 4566";
+            wfContext.Phone = "+79265603326";
+            wfContext.IsPayed = false;
+            wfContext.IsSmsSent = false;
 
-                    execution = wf.Resume(wfContext, new { message = "йа - кложурка!!!" });
-                    Assert.That(execution.State, Is.EqualTo(WorkflowState.Complete), "Execution was not complete after async activity was successfully resumed and returned Succeeded status");
-                    Assert.That(wfContext, Is.EquivalentTo(new[] { "TestActivity1", "AsyncTestActivity", "TestActivity3" }), "Wrong activities were executed");
+            var execution = wf.Run(wfContext);
+            wf.Resume(wfContext, new ActivityState {NodeName = "Pay", Status = ActivityStatus.Complete, Values = JObject.Parse("{'IsPayed':true}")});
+            wf.Resume(wfContext, new ActivityState {NodeName = "SendSMS", Status = ActivityStatus.Complete, Values = JObject.Parse("{'IsSmsSent':true}")});
+            Assert.That(execution.State, Is.EqualTo(WorkflowState.Complete));
+            Assert.That(wfContext.IsPayed == true, Is.True, "Wrong activities were executed");
+            Assert.That(wfContext.IsSmsSent == true, Is.True, "Wrong activities were executed");
+            Assert.That(executor.Input.Count, Is.EqualTo(2), "Executor was called with wrong data");
 
-                }
-
-                [Test]
-                public void ResumeFromTest()
-                {
-                    var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>());
-                    wf.Configure(cfg => cfg
-                        .Do<TestActivity1, List<string>, List<string>>("node1", list => list, (context, output) => context.Add("TestActivity1"))
-                        .Do<AsyncTestActivity, List<string>, List<string>>("node2", list => { list.Add("AsyncTestActivity"); return list; }, (context, output) => { })
-                        .Do<TestActivity3, List<string>, List<string>>("node3", list => list, (context, output) => context.Add("TestActivity3"))
-                        .Do<TestActivity1, List<string>, List<string>>("node4", list => list, (context, output) => context.Add("TestActivity2"))
-                        .End());
-                    var wfContext = new List<string>();
-                    var execution = wf.Run(wfContext);
-                    Assert.That(execution.State, Is.EqualTo(WorkflowState.InProgress), "Execution was not paused when async activity returned Pednding status");
-                    Assert.That(wfContext, Is.EquivalentTo(new[] { "TestActivity1", "AsyncTestActivity" }), "Wrong activities were executed");
-
-                    execution = wf.ResumeFrom(wfContext, "node4");
-                    Assert.That(execution.State, Is.EqualTo(WorkflowState.Complete), "Execution was not complete after async activity was successfully resumed and returned Succeeded status");
-                    Assert.That(wfContext, Is.EquivalentTo(new[] { "TestActivity1", "AsyncTestActivity", "TestActivity2" }), "Wrong activities were executed");
-
-                }
-                [Test]
-                public void GenericActivityTest()
-                {
-                    FakeExecutor executor = new FakeExecutor();
-                    var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>(),activityExecutor:executor);
-                    wf.Configure(cfg => cfg
-                        .Do("someActivity","node1", list => new {data=list[0]}, (context, output) => context.Add(output))
-                        .Do("someOtherActivity","node2", list => new {data=list[1]}, (context, output) => context.Add(output))
-                        .End());
-                    var wfContext = new List<string>(new[]{"1","2"});
-                    var execution = wf.Run(wfContext);
-                    wf.Resume(wfContext, new ActivityState {NodeName = "node1", Status = ActivityStatus.Complete, Values = "output1"});
-                    wf.Resume(wfContext, new ActivityState {NodeName = "node2", Status = ActivityStatus.Complete, Values = "output2"});
-                    Assert.That(execution.State, Is.EqualTo(WorkflowState.Complete));
-                    Assert.That(wfContext, Is.EquivalentTo(new[] { "1","2","output1","output2"}), "Wrong activities were executed");
-                    Assert.That(executor.Input.Select(i=>((dynamic)i).data), Is.EquivalentTo(new[] { "1", "2"}), "Executor was called with erong data");
-
-                }
+        }
     }
 
     public class FakeExecutor : IActivityExecutor
