@@ -13,7 +13,7 @@ namespace Inceptum.Workflow.Fluent
         IExecutionFlow<TContext> WithBranch();
     }
 
-
+   
 
     public class WorkflowConfiguration<TContext> : IExecutionFlow<TContext>, IBranchingPoint<TContext>, IDecisionPoint<TContext>
     {
@@ -30,6 +30,15 @@ namespace Inceptum.Workflow.Fluent
         internal Stack<IGraphNode<TContext>> Nodes
         {
             get { return m_Nodes; }
+        }
+
+        public WorkflowConfiguration<TContext> Do(string activity,string name,Func<TContext,object> getActivityInput,Action<TContext,dynamic> process ) 
+        {
+            var activityNode = m_Workflow.CreateNode(name,activity);
+            if (Nodes.Count > 0)
+                Nodes.Peek().AddConstraint(name, (context, state) => state == ActivityResult.Succeeded, "Success");
+            Nodes.Push(activityNode);
+            return this;
         }
 
         public WorkflowConfiguration<TContext> Do<TActivity>(string name) where TActivity : IActivity<TContext>

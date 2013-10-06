@@ -62,7 +62,7 @@
     <Compile Include="GraphNode.cs" />
     <Compile Include="IHideObjectMembers.cs" />
     <Compile Include="IWorkflowPersister.cs" />
-    <Compile Include="WorflowExecutor.cs" />
+    <Compile Include="WorkflowExecutor.cs" />
     <Compile Include="Workflow.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="YumlClassGenerator.cs" />

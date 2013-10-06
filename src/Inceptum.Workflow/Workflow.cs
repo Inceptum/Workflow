@@ -11,16 +11,18 @@ namespace Inceptum.Workflow
         IGraphNode<TContext> this[string name] { get; }
     }
 
-    public class Workflow<TContext> : IActivityFactory<TContext>, INodesResolver<TContext>
+    public class Workflow<TContext> : IActivityFactory<TContext>, INodesResolver<TContext>, IActivityExecutor<TContext>
     {
         private readonly IGraphNode<TContext> m_End;
         private readonly Dictionary<string, IGraphNode<TContext>> m_Nodes = new Dictionary<string, IGraphNode<TContext>>();
         private readonly IGraphNode<TContext> m_Start;
         private IWorkflowPersister<TContext> m_Persister;
         private IActivityFactory<TContext> m_ActivityFactory;
+        private IActivityExecutor<TContext> m_ActivityExecutor;
 
-        public Workflow(string name, IWorkflowPersister<TContext> persister, IActivityFactory<TContext> activityFactory = null)
+        public Workflow(string name, IWorkflowPersister<TContext> persister, IActivityFactory<TContext> activityFactory = null,IActivityExecutor<TContext> activityExecutor=null )
         {
+            m_ActivityExecutor = activityExecutor??this;
             m_ActivityFactory = activityFactory ?? this;
             m_Persister = persister;
             Name = name;
@@ -81,7 +83,7 @@ namespace Inceptum.Workflow
         public Execution<TContext> Run(TContext context)
         {
             var execution = new Execution<TContext> { State = WorkflowState.InProgress };
-            var executor = new WorflowExecutor<TContext>(execution, context, this, m_ActivityFactory);
+            var executor = new WorkflowExecutor<TContext>(execution, context, this, m_ActivityFactory, m_ActivityExecutor);
             accept(executor);
             Console.WriteLine("Done: " + execution.State);
             m_Persister.Save(context, execution);
@@ -92,7 +94,7 @@ namespace Inceptum.Workflow
         public Execution<TContext> Resume<TClosure>(TContext context, TClosure closure)
         {
             var execution = m_Persister.Load(context);
-            var executor = new WorflowExecutor<TContext>(execution, context, this, m_ActivityFactory, (activity, c) => activity.Resume(c, closure));
+            var executor = new WorkflowExecutor<TContext>(execution, context, this, m_ActivityFactory, m_ActivityExecutor, (activity, c) => activity.Resume(c, closure));
             string node = execution.Log.Select(item => item.Node).LastOrDefault();
             accept(executor, node);
             m_Persister.Save(context, execution);
@@ -103,7 +105,7 @@ namespace Inceptum.Workflow
         public Execution<TContext> ResumeFrom(TContext context, string node)
         {
             var execution = m_Persister.Load(context);
-            var executor = new WorflowExecutor<TContext>(execution, context, this, m_ActivityFactory);
+            var executor = new WorkflowExecutor<TContext>(execution, context, this, m_ActivityFactory, m_ActivityExecutor);
             accept(executor, node);
             m_Persister.Save(context, execution);
             Console.WriteLine("Done: " + execution.State);
@@ -119,6 +121,13 @@ namespace Inceptum.Workflow
             return node;
         }
 
+        internal IGraphNode<TContext> CreateNode(string name,string activityType, params string[] aliases)
+        {
+            var node = new GraphNode<TContext>(name,activityType);
+            registerNode(node, aliases);
+            return node;
+        }
+
         private void registerNode(IGraphNode<TContext> node, params string[] aliases)
         {
             m_Nodes.Add(node.Name, node);
@@ -129,10 +138,15 @@ namespace Inceptum.Workflow
         }
 
 
-        private T accept<T>(IWorflowVisitor<TContext, T> worflowExecutor, string startFrom = null)
+        private T accept<T>(IWorflowVisitor<TContext, T> workflowExecutor, string startFrom = null)
         {
             IGraphNode<TContext> node = startFrom == null ? m_Start : m_Nodes[startFrom];
-            return node.Accept(worflowExecutor);
+            return node.Accept(workflowExecutor);
+        }
+
+        public ActivityResult Execute(TContext context, string activityType, string nodeName)
+        {
+            return ActivityResult.Failed;
         }
 
         public override string ToString()

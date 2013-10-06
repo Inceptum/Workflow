@@ -9,17 +9,27 @@ namespace Inceptum.Workflow
         public ActivityResult State { get; set; }
     }
 
-    internal class GraphNode<TContext, TActivity> : IGraphNode<TContext> where TActivity : IActivity<TContext>
+    internal class GraphNode<TContext, TActivity> : GraphNode<TContext> where TActivity : IActivity<TContext>
     {
-        public GraphNode(string name)
+        public GraphNode(string name) : base(name,typeof(TActivity).Name)
+        {
+        }
+    }
+
+
+    internal class GraphNode<TContext> : IGraphNode<TContext> 
+    {
+        
+        public GraphNode(string name,string activityType)
         {
             Name = name;
+            ActivityType = activityType;
         }
 
         public string Name { get; private set; }
+        public string ActivityType { get; private set; }
 
-        private readonly List<GraphEdge<TContext>> m_Constraints =
-            new List<GraphEdge<TContext>>();
+        private readonly List<GraphEdge<TContext>> m_Constraints = new List<GraphEdge<TContext>>();
 
         public virtual void AddConstraint(string node, Func<TContext, ActivityResult, bool> condition, string description)
         {
@@ -31,9 +41,9 @@ namespace Inceptum.Workflow
             get { return m_Constraints; }
         }
 
-        public T Accept<T>(IWorflowVisitor<TContext, T> worflowExecutor)
+        public T Accept<T>(IWorflowVisitor<TContext, T> workflowExecutor)
         {
-            return worflowExecutor.Visit(this);
+            return workflowExecutor.Visit(this);
         }
     }
 }

@@ -150,6 +150,38 @@ namespace Inceptum.Workflow.Tests
 
 
         }
+  
+        [Test]
+        [Ignore]
+        public void Test4()
+        {
+            var wf = new Workflow<Executable>("", new InMemoryPersister<Executable>());
+            wf.Configure(cfg => cfg.Do("ValidateInputData","Проверка входных данных",
+                                        ex =>new {ex.DiasDoc,ex.AccountType},
+                                        (ex, values) => ex.DiasDoc=values.Test)
+                                    .Do<GenerateConfirmationDocument>("Генерация документа на подпись")
+                                    .On("Карточный счет").DeterminedAs(operation => operation.AccountType == "card").ContinueWith("Списание с карты")
+                                    .On("Текущий   счет").DeterminedAs(operation => operation.AccountType == "acc").ContinueWith("Обращение в диас")
+                                .WithBranch().Do<GenerateProofDocument>("Генерация документа").OnFail("Уведомить админов").End()
+                                .WithBranch().Do<CardDebit>("Списание с карты").Do<CreateDiasDocument>("исполнение документа в диасофт").Do<CardSettlement>("создание проводки в 3card").OnFail("Уведомить админов").ContinueWith("Генерация документа")
+                                .WithBranch().Do<CreateDiasDocument>("Обращение в диас").ContinueWith("Генерация документа")
+                                .WithBranch().Do<NotefyAdmins>("Уведомить админов").End()
+                                );
+
+            var executable = new Executable { AccountType = "card" };
+            wf.Run(executable);
+            Console.WriteLine();
+            Console.WriteLine();
+            wf.Resume(executable, -1);
+            Console.WriteLine();
+            Console.WriteLine();
+            wf.Resume(executable, 1);
+            Console.WriteLine();
+            Console.WriteLine();
+            Console.WriteLine(wf);
+
+
+        }
 
 
         [Test]
