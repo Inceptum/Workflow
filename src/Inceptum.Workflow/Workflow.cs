@@ -11,23 +11,23 @@ namespace Inceptum.Workflow
         IGraphNode<TContext> this[string name] { get; }
     }
 
-    public class Workflow<TContext> : IActivityFactory<TContext>, INodesResolver<TContext>, IActivityExecutor<TContext>
+    public class Workflow<TContext> : IActivityFactory , INodesResolver<TContext>, IActivityExecutor 
     {
         private readonly IGraphNode<TContext> m_End;
         private readonly Dictionary<string, IGraphNode<TContext>> m_Nodes = new Dictionary<string, IGraphNode<TContext>>();
         private readonly IGraphNode<TContext> m_Start;
         private IWorkflowPersister<TContext> m_Persister;
-        private IActivityFactory<TContext> m_ActivityFactory;
-        private IActivityExecutor<TContext> m_ActivityExecutor;
+        private IActivityFactory  m_ActivityFactory;
+        private IActivityExecutor m_ActivityExecutor;
 
-        public Workflow(string name, IWorkflowPersister<TContext> persister, IActivityFactory<TContext> activityFactory = null,IActivityExecutor<TContext> activityExecutor=null )
+        public Workflow(string name, IWorkflowPersister<TContext> persister, IActivityFactory  activityFactory = null,IActivityExecutor  activityExecutor=null )
         {
             m_ActivityExecutor = activityExecutor??this;
             m_ActivityFactory = activityFactory ?? this;
             m_Persister = persister;
             Name = name;
-            m_Start = new GraphNode<TContext, EmptyActivity<TContext>>("start");
-            m_End = new GraphNode<TContext, EndActivity<TContext>>("end");
+            m_Start = new GraphNode<TContext, EmptyActivity, object, object>("start", context => null, (context, o) => { });
+            m_End = new GraphNode<TContext, EndActivity, object, object>("end", context => null, (context, o) => { });
             registerNode(m_End);
         }
 
@@ -46,7 +46,7 @@ namespace Inceptum.Workflow
 
         #region IActivityFactory<TContext> Members
 
-        TActivity IActivityFactory<TContext>.Create<TActivity>()
+        TActivity IActivityFactory.Create<TActivity, TInput, TOutput>()
         {
             return Activator.CreateInstance<TActivity>();
         }
@@ -94,7 +94,7 @@ namespace Inceptum.Workflow
         public Execution<TContext> Resume<TClosure>(TContext context, TClosure closure)
         {
             var execution = m_Persister.Load(context);
-            var executor = new WorkflowExecutor<TContext>(execution, context, this, m_ActivityFactory, m_ActivityExecutor, (activity, c) => activity.Resume(c, closure));
+            var executor = new WorkflowExecutor<TContext>(execution, context, this, m_ActivityFactory, m_ActivityExecutor,   closure);
             string node = execution.Log.Select(item => item.Node).LastOrDefault();
             accept(executor, node);
             m_Persister.Save(context, execution);
@@ -113,20 +113,22 @@ namespace Inceptum.Workflow
         }
 
 
-        internal IGraphNode<TContext> CreateNode<TActivity>(string name, params string[] aliases)
-            where TActivity : IActivity<TContext>
+        internal IGraphNode<TContext> CreateNode<TActivity, TInput, TOutput>(string name, Func<TContext, TInput> getActivityInput, Action<TContext, TOutput> processOutput, params string[] aliases)
+            where TActivity : IActivity<TInput, TOutput>
         {
-            var node = new GraphNode<TContext, TActivity>(name);
+            var node = new GraphNode<TContext, TActivity, TInput, TOutput>(name, getActivityInput, processOutput);
             registerNode(node, aliases);
             return node;
         }
 
-        internal IGraphNode<TContext> CreateNode(string name,string activityType, params string[] aliases)
+        internal IGraphNode<TContext> CreateNode(string name, string activityType, Func<TContext, dynamic> getActivityInput, Action<TContext, dynamic> processOutput, params string[] aliases)
         {
-            var node = new GraphNode<TContext>(name,activityType);
+            var node = new GraphNode<TContext>(name, activityType, getActivityInput, processOutput);
             registerNode(node, aliases);
             return node;
         }
+
+    
 
         private void registerNode(IGraphNode<TContext> node, params string[] aliases)
         {
@@ -138,22 +140,25 @@ namespace Inceptum.Workflow
         }
 
 
-        private T accept<T>(IWorflowVisitor<TContext, T> workflowExecutor, string startFrom = null)
+        private T accept<T>(IWorkflowVisitor<TContext, T> workflowExecutor, string startFrom = null)
         {
             IGraphNode<TContext> node = startFrom == null ? m_Start : m_Nodes[startFrom];
             return node.Accept(workflowExecutor);
         }
+ 
 
-        public ActivityResult Execute(TContext context, string activityType, string nodeName)
+
+        public ActivityResult Execute(string activityType, string nodeName, dynamic input, Action<dynamic> processOutput)
         {
             return ActivityResult.Failed;
         }
-
+ 
         public override string ToString()
         {
             var yuml = new YumlActivityGenerator<TContext>(this);
             return "paste the following to http://yuml.me/diagram/nofunky/activity/draw\n" + accept(yuml);
             // HttpUtility.UrlEncode(m_Graph.ToString());
         }
+
     }
 }

@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Inceptum.Workflow
 {
-    internal class YumlClassGenerator<TContext> : IWorflowVisitor<TContext, string>
+    internal class YumlClassGenerator<TContext> : IWorkflowVisitor<TContext, string>
     {
         private readonly List<IGraphNode<TContext>> m_Visited = new List<IGraphNode<TContext>>();
         private readonly IDictionary<string, IGraphNode<TContext>> m_Nodes;
@@ -14,7 +14,8 @@ namespace Inceptum.Workflow
             m_Nodes = nodes;
         }
 
-        public string Visit<TActivity>(GraphNode<TContext, TActivity> node) where TActivity : IActivity<TContext>
+
+        public string Visit<TActivity, TInput, TOutput>(GraphNode<TContext, TActivity, TInput, TOutput> node) where TActivity : IActivity<TInput, TOutput>
         {
             return Visit(node as GraphNode<TContext>);
         }
@@ -34,7 +35,7 @@ namespace Inceptum.Workflow
         }
     }
 
-    internal class YumlActivityGenerator<TContext> : IWorflowVisitor<TContext, string>
+    internal class YumlActivityGenerator<TContext> : IWorkflowVisitor<TContext, string>
     {
         private readonly Dictionary<char, string> m_Traslit = new Dictionary<char, string>()
                                                            {
@@ -49,7 +50,8 @@ namespace Inceptum.Workflow
             m_Nodes = nodes;
         }
 
-        public string Visit<TActivity>(GraphNode<TContext, TActivity> node) where TActivity : IActivity<TContext>
+
+        public string Visit<TActivity, TInput, TOutput>(GraphNode<TContext, TActivity, TInput, TOutput> node) where TActivity : IActivity<TInput, TOutput>
         {
             return Visit(node as GraphNode<TContext>);
         }

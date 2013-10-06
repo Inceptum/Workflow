@@ -1,8 +1,10 @@
+using System;
+
 namespace Inceptum.Workflow
 {
-    public interface IActivity<in TContext>
+    public interface IActivity<in TInput, out TOutput>
     {
-        ActivityResult Execute(TContext context);
-        ActivityResult Resume<TClosure>(TContext context, TClosure closure);
+        ActivityResult Execute(TInput input, Action<TOutput> processOutput);
+        ActivityResult Resume<TClosure>(Action<TOutput> processOutput, TClosure closure);
     }
 }

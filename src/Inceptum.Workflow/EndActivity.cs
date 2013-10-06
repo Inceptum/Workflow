@@ -1,8 +1,10 @@
+using System;
+
 namespace Inceptum.Workflow
 {
-    public class EndActivity<TContext> : ActivityBase<TContext>
+    public class EndActivity  : ActivityBase<object,object>
     {
-        public override ActivityResult Execute(TContext context)
+        public override ActivityResult Execute(object input, Action<object> processOutput)
         {
             return ActivityResult.Succeeded;
         }

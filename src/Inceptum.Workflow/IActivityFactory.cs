@@ -1,7 +1,7 @@
 namespace Inceptum.Workflow
 {
-    public interface IActivityFactory<out TContext>
+    public interface IActivityFactory 
     {
-        TActivity Create<TActivity>() where TActivity : IActivity<TContext>;
+        TActivity Create<TActivity, TInput, TOutput>() where TActivity : IActivity<TInput, TOutput>;
     }
 }

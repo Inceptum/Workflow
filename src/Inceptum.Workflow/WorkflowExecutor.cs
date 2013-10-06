@@ -30,57 +30,101 @@ namespace Inceptum.Workflow
 
     public class ActivityState
     {
-        public string Values { get; set; }
+        public dynamic Values { get; set; }
         public string NodeName { get; set; }
         public ActivityStatus Status { get; set; }
     }
 
-    public interface IActivityExecutor<TContext>
+    public interface IActivityExecutor 
     {
-        ActivityResult Execute(TContext context, string activityType, string nodeName);
+        ActivityResult Execute(string activityType, string nodeName,dynamic input, Action<dynamic> processOutput);
     }
 
-    internal class WorkflowExecutor<TContext> : IWorflowVisitor<TContext, WorkflowState>
+    public class GenericActivity:ActivityBase<dynamic,dynamic>
     {
-        private readonly IActivityFactory<TContext> m_Factory;
+        private readonly IActivityExecutor m_Executor;
+        private readonly string m_ActivityType;
+        private readonly string m_NodeName;
+
+        public GenericActivity(IActivityExecutor executor, string activityType, string nodeName)
+        {
+            m_NodeName = nodeName;
+            m_ActivityType = activityType;
+            m_Executor = executor;
+        }
+
+        public override ActivityResult Execute(dynamic input, Action<dynamic> processOutput)
+        {
+            return m_Executor.Execute(m_ActivityType, m_NodeName,input, processOutput);
+        }
+
+        public override ActivityResult Resume<TClosure>(Action<dynamic> processOutput, TClosure closure)
+        {
+            if (closure.GetType()== typeof(ActivityState))
+            {
+                var state = ((ActivityState)(object)closure);
+                if(state.NodeName!=m_NodeName)
+                    return ActivityResult.Pending;
+
+                if (state.Status == ActivityStatus.Complete)
+                {
+                    processOutput(state.Values);
+                    return ActivityResult.Succeeded;
+                }
+
+                if (state.Status == ActivityStatus.Failed)
+                {
+                    return ActivityResult.Failed;
+                }
+            }
+            return ActivityResult.Pending;
+        }
+    }
+
+    internal class WorkflowExecutor<TContext> : IWorkflowVisitor<TContext, WorkflowState>
+    {
+        private readonly IActivityFactory m_Factory;
         private readonly INodesResolver<TContext> m_Nodes;
-        private Func<IActivity<TContext>, TContext, ActivityResult> m_Resume;
         private readonly Execution<TContext> m_Execution;
         private readonly TContext m_Context;
-        private readonly IActivityExecutor<TContext> m_ActivityExecutor;
+        private readonly IActivityExecutor m_ActivityExecutor;
+        private bool m_Resuming = false;
+        private readonly object m_Closure;
 
-
-        public WorkflowExecutor(Execution<TContext> execution, TContext context, INodesResolver<TContext> nodes, IActivityFactory<TContext> factory,IActivityExecutor<TContext> activityExecutor,
-            Func<IActivity<TContext>, TContext, ActivityResult> resume = null)
+        public WorkflowExecutor(Execution<TContext> execution, TContext context, INodesResolver<TContext> nodes, IActivityFactory factory,IActivityExecutor  activityExecutor,object closure)
+            :this(execution,context,nodes,factory,activityExecutor)
         {
-            m_ActivityExecutor = activityExecutor;
+            m_Resuming = true;
+            m_Closure = closure;
+        }
+
+        public WorkflowExecutor(Execution<TContext> execution, TContext context, INodesResolver<TContext> nodes, IActivityFactory factory,IActivityExecutor  activityExecutor)
+        {
             m_Context = context;
-            m_Resume = resume;
             m_Factory = factory;
             m_Execution = execution;
             m_Nodes = nodes;
+            m_ActivityExecutor=activityExecutor;
         }
 
-        public WorkflowState Visit<TActivity>(GraphNode<TContext, TActivity> node) where TActivity : IActivity<TContext>
+
+
+
+        public WorkflowState Visit<TActivity, TInput, TOutput>(GraphNode<TContext, TActivity, TInput, TOutput> node) where TActivity : IActivity<TInput, TOutput>
         {
-            var activity = m_Factory.Create<TActivity>();
-            ActivityResult result = m_Resume != null ? m_Resume(activity, m_Context) : activity.Execute(m_Context);
-            return visit(node, result);
-        }
+            TActivity activity;
+            if (typeof (TActivity) == typeof (GenericActivity))
+                activity = (TActivity)(object)new GenericActivity(m_ActivityExecutor, node.ActivityType, node.Name);
+            else
+                activity = m_Factory.Create<TActivity, TInput, TOutput>();
 
-        public WorkflowState Visit(GraphNode<TContext> node)
-        {
+            ActivityResult result = m_Resuming ? activity.Resume(output => node.ProcessOutput(m_Context, output), m_Closure) : activity.Execute(node.GetActivityInput(m_Context), output => node.ProcessOutput(m_Context, output));
+       
 
-            ActivityResult result = m_Resume != null ? m_Resume(null, m_Context) : m_ActivityExecutor.Execute(m_Context,node.ActivityType,node.Name);
-            return visit(node, result);
 
-        }
-
-        private WorkflowState visit(GraphNode<TContext> node,ActivityResult result)  
-        {
             var logItem = m_Execution.AddLog(node.Name);
             Console.WriteLine(node.Name + " (" + node.ActivityType + "): ");
-            m_Resume = null;
+            m_Resuming = false;
             Console.WriteLine("\t" + result);
 
             logItem.Status = result;

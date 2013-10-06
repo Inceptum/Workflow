@@ -5,7 +5,7 @@ namespace Inceptum.Workflow.Fluent
 {
     public interface IExecutionFlow<TContext>: IHideObjectMembers
     {
-        WorkflowConfiguration<TContext> Do<TActivity>(string name) where TActivity : IActivity<TContext>;
+        WorkflowConfiguration<TContext> Do<TActivity, TInput, TOutput>(string name, Func<TContext, TInput> getActivityInput,Action<TContext, TOutput> processOutput) where TActivity : IActivity<TInput, TOutput>;
     }
 
     public interface IBranchingPoint<TContext>: IHideObjectMembers
@@ -32,18 +32,18 @@ namespace Inceptum.Workflow.Fluent
             get { return m_Nodes; }
         }
 
-        public WorkflowConfiguration<TContext> Do(string activity,string name,Func<TContext,object> getActivityInput,Action<TContext,dynamic> process ) 
+        public WorkflowConfiguration<TContext> Do(string activity,string name,Func<TContext,object> getActivityInput,Action<TContext,dynamic> processOutput ) 
         {
-            var activityNode = m_Workflow.CreateNode(name,activity);
+            var activityNode = m_Workflow.CreateNode(name, activity, getActivityInput, processOutput);
             if (Nodes.Count > 0)
                 Nodes.Peek().AddConstraint(name, (context, state) => state == ActivityResult.Succeeded, "Success");
             Nodes.Push(activityNode);
             return this;
         }
 
-        public WorkflowConfiguration<TContext> Do<TActivity>(string name) where TActivity : IActivity<TContext>
+        public WorkflowConfiguration<TContext> Do<TActivity, TInput, TOutput>(string name, Func<TContext, TInput> getActivityInput, Action<TContext, TOutput> processOutput) where TActivity : IActivity<TInput, TOutput>
         {
-            var activityNode = m_Workflow.CreateNode<TActivity>(name);
+            var activityNode = m_Workflow.CreateNode<TActivity, TInput, TOutput>(name, getActivityInput,processOutput);
             if(Nodes.Count>0)
                 Nodes.Peek().AddConstraint(name, (context, state) => state == ActivityResult.Succeeded, "Success");
             Nodes.Push(activityNode);
