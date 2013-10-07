@@ -11,6 +11,7 @@ namespace Inceptum.Workflow.Tests
     public class InvetsigationTests
     {
         [Test]
+        [Ignore]
         public void Test()
         {
              
