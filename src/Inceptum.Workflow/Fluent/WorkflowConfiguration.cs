@@ -41,7 +41,8 @@ namespace Inceptum.Workflow.Fluent
             return this;
         }
 
-        public WorkflowConfiguration<TContext> Do<TActivity, TInput, TOutput>(string name, Func<TContext, TInput> getActivityInput, Action<TContext, TOutput> processOutput) where TActivity : IActivity<TInput, TOutput>
+        public WorkflowConfiguration<TContext> Do<TActivity, TInput, TOutput>(string name, Func<TContext, TInput> getActivityInput, Action<TContext, TOutput> processOutput)
+            where TActivity : IActivity<TInput, TOutput>
         {
             var activityNode = m_Workflow.CreateNode<TActivity, TInput, TOutput>(name, getActivityInput,processOutput);
             if(Nodes.Count>0)

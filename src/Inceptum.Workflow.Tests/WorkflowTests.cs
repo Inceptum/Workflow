@@ -332,16 +332,19 @@ namespace Inceptum.Workflow.Tests
         public void ResumeFromTest()
         {
             var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>());
-/*
-                    wf.Configure(cfg => cfg.Do("Проверка входных данных").Do("Генерация документа на подпись")
-                                 .On("Карточный счет").ContinueWith("Списание с карты")
-                                 .On("Текущий   счет").ContinueWith("Обращение в диас")
-                             .WithBranch().Do("Генерация документа").OnFail("Уведомить админов").End()
-                             .WithBranch().Do("Списание с карты").Do("исполнение документа в диасофт").Do("создание проводки в 3card").OnFail("Уведомить админов").ContinueWith("Генерация документа")
-                             .WithBranch().Do("Обращение в диас").ContinueWith("Генерация документа")
-                             .WithBranch().Do("Уведомить админов").End(),
-                             Node.Named("Проверка входных данных").Takes(List => list).ProcessResult((o, r) => o.Add("TestActivity1")).With<TestActivity>()
-                             );*/
+            /*
+                                wf.Configure(cfg => cfg.Do("Проверка входных данных").Do("Генерация документа на подпись")
+                                             .On("Карточный счет").ContinueWith("Списание с карты")
+                                             .On("Текущий   счет").ContinueWith("Обращение в диас")
+                                         .WithBranch().Do("Генерация документа").OnFail("Уведомить админов").End()
+                                         .WithBranch().Do("Списание с карты").Do("исполнение документа в диасофт").Do("создание проводки в 3card").OnFail("Уведомить админов").ContinueWith("Генерация документа")
+                                         .WithBranch().Do("Обращение в диас").ContinueWith("Генерация документа")
+                                         .WithBranch().Do("Уведомить админов").End(),
+                                         Node.Named("Проверка входных данных").Takes(List => list).ProcessResult((o, r) => o.Add("TestActivity1")).With<TestActivity>()
+             * 
+             * 
+             * .Do<SendSmsActivity, SendSmsInput, SendSmsOutput>("node3", createSmsInput, processSmsOutput)
+                                         );*/
             wf.Configure(cfg => cfg
                 .Do<TestActivity1, List<string>, List<string>>("node1", list => list, (context, output) => context.Add("TestActivity1"))
                 .Do<AsyncTestActivity, List<string>, List<string>>("node2", list =>
