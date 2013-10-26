@@ -3,9 +3,22 @@ using System.Collections.Generic;
 
 namespace Inceptum.Workflow.Fluent
 {
+    public static class IExecutionFlowExtensions
+    {
+        public static WorkflowConfiguration<TContext> Do<TOutput, TContext>(this IExecutionFlow<TContext> flow, string name,
+            Func<TContext, TOutput> activityMethod,
+            Action<TContext, TOutput> processOutput = null)
+        {
+            return flow.Do<DelegateActivity<TContext, TOutput>, TContext, TOutput>(name, context => context, processOutput ?? ((context, output) => { }));
+        }
+
+
+    }
+
     public interface IExecutionFlow<TContext>: IHideObjectMembers
     {
         WorkflowConfiguration<TContext> Do<TActivity, TInput, TOutput>(string name, Func<TContext, TInput> getActivityInput,Action<TContext, TOutput> processOutput) where TActivity : IActivity<TInput, TOutput>;
+        WorkflowConfiguration<TContext> Do<TActivity, TInput, TOutput>(string name, Func<TContext, TInput> getActivityInput) where TActivity : IActivity<TInput, TOutput>;
         WorkflowConfiguration<TContext> Do(string activity, string name, Func<TContext, object> getActivityInput, Action<TContext, dynamic> processOutput);
     }
 
@@ -14,7 +27,22 @@ namespace Inceptum.Workflow.Fluent
         IExecutionFlow<TContext> WithBranch();
     }
 
-   
+    class DelegateActivity<TContext, TOutput> : ActivityBase<TContext, TOutput>
+    {
+        private readonly Func<TContext, TOutput> m_ActivityMethod;
+
+        public DelegateActivity(Func<TContext,TOutput> activityMethod)
+        {
+            if (activityMethod == null) throw new ArgumentNullException("activityMethod");
+            m_ActivityMethod = activityMethod;
+        }
+
+        public override ActivityResult Execute(TContext input, Action<TOutput> processOutput)
+        {
+            processOutput(m_ActivityMethod(input));
+            return ActivityResult.Succeeded;
+        }
+    }
 
     public class WorkflowConfiguration<TContext> : IExecutionFlow<TContext>, IBranchingPoint<TContext>, IDecisionPoint<TContext>
     {
@@ -41,6 +69,12 @@ namespace Inceptum.Workflow.Fluent
             Nodes.Push(activityNode);
             return this;
         }
+
+        public WorkflowConfiguration<TContext> Do<TActivity, TInput, TOutput>(string name, Func<TContext, TInput> getActivityInput ) where TActivity : IActivity<TInput, TOutput>
+        {
+            return Do<TActivity, TInput, TOutput>(name, getActivityInput, (c, o) => { });
+        }
+
 
         public WorkflowConfiguration<TContext> Do<TActivity, TInput, TOutput>(string name, Func<TContext, TInput> getActivityInput, Action<TContext, TOutput> processOutput) where TActivity : IActivity<TInput, TOutput>
         {
