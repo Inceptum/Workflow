@@ -6,10 +6,9 @@ namespace Inceptum.Workflow.Fluent
     public static class ExecutionFlowExtensions
     {
         public static WorkflowConfiguration<TContext> Do<TOutput, TContext>(this IExecutionFlow<TContext> flow, string name,
-            Func<TContext, TOutput> activityMethod,
-            Action<TContext, TOutput> processOutput = null)
+            Func<TContext, TOutput> activityMethod)
         {
-            return flow.Do<DelegateActivity<TOutput>, Func<TOutput>, TOutput>(name, context => (() => activityMethod(context)), processOutput ?? ((context, output) => { }));
+            return flow.Do<DelegateActivity<TOutput>, Func<TOutput>, TOutput>(name, context => (() => activityMethod(context)), ((context, output) => { }));
         }
 
         public static WorkflowConfiguration<TContext> Do<TContext>(this IExecutionFlow<TContext> flow, string activity, Func<TContext, object> getActivityInput,
