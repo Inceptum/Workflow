@@ -13,7 +13,7 @@ namespace Inceptum.Workflow.Fluent
         }
 
         public static WorkflowConfiguration<TContext> Do<TContext>(this IExecutionFlow<TContext> flow, string activity, Func<TContext, object> getActivityInput,
-            Action<TContext, dynamic> processOutput=null)
+            Action<TContext, dynamic> processOutput)
         {
             return flow.Do(activity, activity, getActivityInput, processOutput ?? ((context, o) => { }));
         }
