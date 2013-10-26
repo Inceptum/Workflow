@@ -39,7 +39,14 @@ namespace Inceptum.Workflow.Fluent
 
         public override ActivityResult Execute(TContext input, Action<TOutput> processOutput)
         {
-            processOutput(m_ActivityMethod(input));
+            try
+            {
+                processOutput(m_ActivityMethod(input));
+            }
+            catch (Exception)
+            {
+                return ActivityResult.Failed;
+            }
             return ActivityResult.Succeeded;
         }
     }
