@@ -19,6 +19,12 @@ namespace Inceptum.Workflow
             m_Log.Add(logItem);
             return logItem;
         }
+
+        public Execution(WorkflowState state, IEnumerable<WorkflowLogItem> log)
+        {
+            m_Log.AddRange(log);
+            State = state;
+        }
     }
 
     public enum ActivityStatus
