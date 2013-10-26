@@ -13,6 +13,7 @@ namespace Inceptum.Workflow
 
     public enum WorkflowState
     {
+        None,
         Corrupted,
         InProgress,
         Complete
