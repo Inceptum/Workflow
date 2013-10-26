@@ -6,6 +6,7 @@ namespace Inceptum.Workflow.Fluent
     public interface IExecutionFlow<TContext>: IHideObjectMembers
     {
         WorkflowConfiguration<TContext> Do<TActivity, TInput, TOutput>(string name, Func<TContext, TInput> getActivityInput,Action<TContext, TOutput> processOutput) where TActivity : IActivity<TInput, TOutput>;
+        WorkflowConfiguration<TContext> Do(string activity, string name, Func<TContext, object> getActivityInput, Action<TContext, dynamic> processOutput);
     }
 
     public interface IBranchingPoint<TContext>: IHideObjectMembers
