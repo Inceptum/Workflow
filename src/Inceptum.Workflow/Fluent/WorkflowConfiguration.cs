@@ -3,13 +3,13 @@ using System.Collections.Generic;
 
 namespace Inceptum.Workflow.Fluent
 {
-    public static class IExecutionFlowExtensions
+    public static class ExecutionFlowExtensions
     {
         public static WorkflowConfiguration<TContext> Do<TOutput, TContext>(this IExecutionFlow<TContext> flow, string name,
             Func<TContext, TOutput> activityMethod,
             Action<TContext, TOutput> processOutput = null)
         {
-            return flow.Do<DelegateActivity<TContext, TOutput>, TContext, TOutput>(name, context => context, processOutput ?? ((context, output) => { }));
+            return flow.Do<DelegateActivity<TOutput>, Func<TOutput>, TOutput>(name, context => (() => activityMethod(context)), processOutput ?? ((context, output) => { }));
         }
 
 
@@ -27,25 +27,26 @@ namespace Inceptum.Workflow.Fluent
         IExecutionFlow<TContext> WithBranch();
     }
 
-    class DelegateActivity<TContext, TOutput> : ActivityBase<TContext, TOutput>
+    class DelegateActivity<TOutput> : ActivityBase<Func<TOutput>, TOutput>
     {
-        private readonly Func<TContext, TOutput> m_ActivityMethod;
 
-        public DelegateActivity(Func<TContext,TOutput> activityMethod)
+        public DelegateActivity( )
         {
-            if (activityMethod == null) throw new ArgumentNullException("activityMethod");
-            m_ActivityMethod = activityMethod;
+            
         }
 
-        public override ActivityResult Execute(TContext input, Action<TOutput> processOutput)
+        public override ActivityResult Execute(Func<TOutput> activityMethod, Action<TOutput> processOutput)
         {
             try
             {
-                processOutput(m_ActivityMethod(input));
+                processOutput(activityMethod());
+
             }
             catch (Exception)
             {
+
                 return ActivityResult.Failed;
+
             }
             return ActivityResult.Succeeded;
         }
