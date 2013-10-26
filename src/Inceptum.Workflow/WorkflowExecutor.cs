@@ -20,6 +20,10 @@ namespace Inceptum.Workflow
             return logItem;
         }
 
+        public Execution()
+        {
+        }
+
         public Execution(WorkflowState state, IEnumerable<WorkflowLogItem> log)
         {
             m_Log.AddRange(log);
