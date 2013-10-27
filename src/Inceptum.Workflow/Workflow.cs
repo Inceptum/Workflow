@@ -16,12 +16,14 @@ namespace Inceptum.Workflow
         private readonly IGraphNode<TContext> m_End;
         private readonly Dictionary<string, IGraphNode<TContext>> m_Nodes = new Dictionary<string, IGraphNode<TContext>>();
         private readonly IGraphNode<TContext> m_Start;
-        private IWorkflowPersister<TContext> m_Persister;
-        private IActivityFactory  m_ActivityFactory;
-        private IActivityExecutor m_ActivityExecutor;
+        private readonly IWorkflowPersister<TContext> m_Persister;
+        private readonly IActivityFactory  m_ActivityFactory;
+        private readonly IActivityExecutor m_ActivityExecutor;
+        private IExecutionLogger m_ExecutionLogger;
 
-        public Workflow(string name, IWorkflowPersister<TContext> persister, IActivityFactory  activityFactory = null,IActivityExecutor  activityExecutor=null )
+        public Workflow(string name, IWorkflowPersister<TContext> persister, IActivityFactory  activityFactory = null,IActivityExecutor  activityExecutor=null,IExecutionLogger executionLogger=null )
         {
+            m_ExecutionLogger = executionLogger;
             m_ActivityExecutor = activityExecutor??this;
             m_ActivityFactory = activityFactory ?? this;
             m_Persister = persister;
@@ -83,7 +85,7 @@ namespace Inceptum.Workflow
         public Execution<TContext> Run(TContext context)
         {
             var execution = new Execution<TContext> { State = WorkflowState.InProgress };
-            var executor = new WorkflowExecutor<TContext>(execution, context, this, m_ActivityFactory, m_ActivityExecutor);
+            var executor = new WorkflowExecutor<TContext>(execution, context, this, m_ActivityFactory, m_ActivityExecutor,m_ExecutionLogger);
             accept(executor);
             Console.WriteLine("Done: " + execution.State);
             m_Persister.Save(context, execution);
@@ -94,8 +96,8 @@ namespace Inceptum.Workflow
         public Execution<TContext> Resume<TClosure>(TContext context, TClosure closure)
         {
             var execution = m_Persister.Load(context);
-            var executor = new WorkflowExecutor<TContext>(execution, context, this, m_ActivityFactory, m_ActivityExecutor,   closure);
-            string node = execution.Log.Select(item => item.Node).LastOrDefault();
+            var executor = new WorkflowExecutor<TContext>(execution, context, this, m_ActivityFactory, m_ActivityExecutor, m_ExecutionLogger, closure);
+            string node = execution.ActiveNode;
             accept(executor, node);
             m_Persister.Save(context, execution);
             Console.WriteLine("Done: " + execution.State);
@@ -105,7 +107,7 @@ namespace Inceptum.Workflow
         public Execution<TContext> ResumeFrom(TContext context, string node)
         {
             var execution = m_Persister.Load(context);
-            var executor = new WorkflowExecutor<TContext>(execution, context, this, m_ActivityFactory, m_ActivityExecutor);
+            var executor = new WorkflowExecutor<TContext>(execution, context, this, m_ActivityFactory, m_ActivityExecutor, m_ExecutionLogger);
             accept(executor, node);
             m_Persister.Save(context, execution);
             Console.WriteLine("Done: " + execution.State);

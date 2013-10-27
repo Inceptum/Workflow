@@ -1,36 +1,8 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 
 namespace Inceptum.Workflow
 {
-    public class Execution<TContext>
-    {
-        private readonly List<WorkflowLogItem> m_Log = new List<WorkflowLogItem>();
-        public WorkflowState State { get; set; }
-        public IEnumerable<WorkflowLogItem> Log
-        {
-            get { return m_Log; }
-        }
-
-        public WorkflowLogItem AddLog(string node)
-        {
-            var logItem = new WorkflowLogItem(node) { Start = DateTime.Now };
-            m_Log.Add(logItem);
-            return logItem;
-        }
-
-        public Execution()
-        {
-        }
-
-        public Execution(WorkflowState state, IEnumerable<WorkflowLogItem> log)
-        {
-            m_Log.AddRange(log);
-            State = state;
-        }
-    }
-
     public enum ActivityStatus
     {
         None,
@@ -45,49 +17,23 @@ namespace Inceptum.Workflow
         public ActivityStatus Status { get; set; }
     }
 
-    public interface IActivityExecutor 
+    class NullExecutionLogger : IExecutionLogger
     {
-        ActivityResult Execute(string activityType, string nodeName,dynamic input, Action<dynamic> processOutput);
-    }
-
-    public class GenericActivity:ActivityBase<dynamic,dynamic>
-    {
-        private readonly IActivityExecutor m_Executor;
-        private readonly string m_ActivityType;
-        private readonly string m_NodeName;
-
-        public GenericActivity(IActivityExecutor executor, string activityType, string nodeName)
+        public void ActivityStarted(string node, string activityType, string inputValues)
         {
-            m_NodeName = nodeName;
-            m_ActivityType = activityType;
-            m_Executor = executor;
+            
         }
 
-        public override ActivityResult Execute(dynamic input, Action<dynamic> processOutput)
+        public void ActivityFinished(string node, string activityType, string outputValues)
         {
-            return m_Executor.Execute(m_ActivityType, m_NodeName,input, processOutput);
         }
 
-        public override ActivityResult Resume<TClosure>(Action<dynamic> processOutput, TClosure closure)
+        public void ActivityFailed(string node, string activityType)
         {
-            if (closure.GetType()== typeof(ActivityState))
-            {
-                var state = ((ActivityState)(object)closure);
-                if(state.NodeName!=m_NodeName)
-                    return ActivityResult.Pending;
+        }
 
-                if (state.Status == ActivityStatus.Complete)
-                {
-                    processOutput(state.Values);
-                    return ActivityResult.Succeeded;
-                }
-
-                if (state.Status == ActivityStatus.Failed)
-                {
-                    return ActivityResult.Failed;
-                }
-            }
-            return ActivityResult.Pending;
+        public void ActivityCorrupted(string node, string activityType)
+        {
         }
     }
 
@@ -100,16 +46,18 @@ namespace Inceptum.Workflow
         private readonly IActivityExecutor m_ActivityExecutor;
         private bool m_Resuming = false;
         private readonly object m_Closure;
+        private IExecutionLogger m_Logger;
 
-        public WorkflowExecutor(Execution<TContext> execution, TContext context, INodesResolver<TContext> nodes, IActivityFactory factory,IActivityExecutor  activityExecutor,object closure)
-            :this(execution,context,nodes,factory,activityExecutor)
+        public WorkflowExecutor(Execution<TContext> execution, TContext context, INodesResolver<TContext> nodes, IActivityFactory factory,IActivityExecutor  activityExecutor,IExecutionLogger logger,object closure)
+            :this(execution,context,nodes,factory,activityExecutor,logger)
         {
             m_Resuming = true;
             m_Closure = closure;
         }
 
-        public WorkflowExecutor(Execution<TContext> execution, TContext context, INodesResolver<TContext> nodes, IActivityFactory factory,IActivityExecutor  activityExecutor)
+        public WorkflowExecutor(Execution<TContext> execution, TContext context, INodesResolver<TContext> nodes, IActivityFactory factory, IActivityExecutor activityExecutor, IExecutionLogger logger)
         {
+            m_Logger = logger??new NullExecutionLogger();
             m_Context = context;
             m_Factory = factory;
             m_Execution = execution;
@@ -128,15 +76,34 @@ namespace Inceptum.Workflow
             else
                 activity = m_Factory.Create<TActivity, TInput, TOutput>();
 
-            ActivityResult result = m_Resuming ? activity.Resume(output => node.ProcessOutput(m_Context, output), m_Closure) : activity.Execute(node.GetActivityInput(m_Context), output => node.ProcessOutput(m_Context, output));
-       
+            string activityOutput = null;
+            ActivityResult result;
+            m_Execution.ActiveNode = node.Name;
+            if (m_Resuming)
+            {
+                result = activity.Resume(output =>
+                {
+                    activityOutput = output.ToString();
+                    node.ProcessOutput(m_Context, output);
+                }, m_Closure);
+             }
+            else
+            {
+                var activityInput = node.GetActivityInput(m_Context);
+                var input = activityInput == null?"":activityInput.ToString();
+                m_Logger.ActivityStarted(node.Name, node.ActivityType, input);
+                result = activity.Execute(activityInput, output =>
+                    {
+                        activityOutput = output==null?"":output.ToString();
+                        node.ProcessOutput(m_Context, output);
+                    });
+
+            }
 
 
-            var logItem = m_Execution.AddLog(node.Name);
             Console.WriteLine("\t"+node.Name + " (" + node.ActivityType + "): " + result);
             m_Resuming = false;
 
-            logItem.Status = result;
             if (result == ActivityResult.Pending)
             {
                 m_Execution.State = WorkflowState.InProgress;
@@ -146,12 +113,19 @@ namespace Inceptum.Workflow
             if (result == ActivityResult.None)
             {
                 m_Execution.State = WorkflowState.Corrupted;
+                m_Logger.ActivityCorrupted(node.Name, node.ActivityType);
                 return WorkflowState.Corrupted;
             }
 
+            if (result == ActivityResult.Failed)
+            {
+                m_Logger.ActivityFailed(node.Name, node.ActivityType);
+            }
 
-
-            logItem.End = DateTime.Now;
+            if (result == ActivityResult.Succeeded)
+            {
+                m_Logger.ActivityFinished(node.Name, node.ActivityType,activityOutput);
+            }
 
             var next = node.Edges.SingleOrDefault(e => e.Condition(m_Context, result));
 
