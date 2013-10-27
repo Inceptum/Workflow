@@ -382,8 +382,8 @@ namespace Inceptum.Workflow.Tests
             wfContext.IsSmsSent = false;
 
             var execution = wf.Run(wfContext);
-            wf.Resume(wfContext, new ActivityState {NodeName = "Pay", Status = ActivityStatus.Complete, Values = JObject.Parse("{'IsPayed':true}")});
-            wf.Resume(wfContext, new ActivityState {NodeName = "SendSMS", Status = ActivityStatus.Complete, Values = JObject.Parse("{'IsSmsSent':true}")});
+            wf.Resume(wfContext, new ActivityState {NodeName = "Pay", Status = ActivityResult.Succeeded, Values = JObject.Parse("{'IsPayed':true}")});
+            wf.Resume(wfContext, new ActivityState {NodeName = "SendSMS", Status = ActivityResult.Succeeded, Values = JObject.Parse("{'IsSmsSent':true}")});
             Assert.That(execution.State, Is.EqualTo(WorkflowState.Complete));
             Assert.That(wfContext.IsPayed == true, Is.True, "Wrong activities were executed");
             Assert.That(wfContext.IsSmsSent == true, Is.True, "Wrong activities were executed");

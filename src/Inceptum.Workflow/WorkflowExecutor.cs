@@ -3,18 +3,11 @@ using System.Linq;
 
 namespace Inceptum.Workflow
 {
-    public enum ActivityStatus
-    {
-        None,
-        Failed,
-        Complete
-    }
-
     public class ActivityState
     {
         public dynamic Values { get; set; }
         public string NodeName { get; set; }
-        public ActivityStatus Status { get; set; }
+        public ActivityResult Status { get; set; }
     }
 
     class NullExecutionLogger : IExecutionLogger

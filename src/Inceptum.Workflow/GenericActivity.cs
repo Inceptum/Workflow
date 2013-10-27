@@ -32,13 +32,13 @@ namespace Inceptum.Workflow
                 if(state.NodeName!=m_NodeName)
                     return ActivityResult.Pending;
 
-                if (state.Status == ActivityStatus.Complete)
+                if (state.Status == ActivityResult.Succeeded)
                 {
                     processOutput(state.Values);
                     return ActivityResult.Succeeded;
                 }
 
-                if (state.Status == ActivityStatus.Failed)
+                if (state.Status == ActivityResult.Failed)
                 {
                     return ActivityResult.Failed;
                 }
