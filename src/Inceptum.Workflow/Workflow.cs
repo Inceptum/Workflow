@@ -82,7 +82,7 @@ namespace Inceptum.Workflow
         }
 
 
-        public Execution<TContext> Run(TContext context)
+        public virtual Execution<TContext> Run(TContext context)
         {
             var execution = new Execution<TContext> { State = WorkflowState.InProgress };
             var executor = new WorkflowExecutor<TContext>(execution, context, this, m_ActivityFactory, m_ActivityExecutor,m_ExecutionLogger);
@@ -93,7 +93,7 @@ namespace Inceptum.Workflow
         }
 
 
-        public Execution<TContext> Resume<TClosure>(TContext context, TClosure closure)
+        public virtual Execution<TContext> Resume<TClosure>(TContext context, TClosure closure)
         {
             var execution = m_Persister.Load(context);
             var executor = new WorkflowExecutor<TContext>(execution, context, this, m_ActivityFactory, m_ActivityExecutor, m_ExecutionLogger, closure);
@@ -104,7 +104,7 @@ namespace Inceptum.Workflow
             return execution;
         }
 
-        public Execution<TContext> ResumeFrom(TContext context, string node)
+        public virtual Execution<TContext> ResumeFrom(TContext context, string node)
         {
             var execution = m_Persister.Load(context);
             var executor = new WorkflowExecutor<TContext>(execution, context, this, m_ActivityFactory, m_ActivityExecutor, m_ExecutionLogger);
