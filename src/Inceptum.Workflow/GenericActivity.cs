@@ -4,7 +4,7 @@ namespace Inceptum.Workflow
 {
     public interface IActivityExecutor
     {
-        ActivityResult Execute(string activityType, string nodeName, dynamic input, Action<dynamic> processOutput);
+        ActivityResult Execute(string activityType, string nodeName, object input, Action<dynamic> processOutput);
     }
     public class GenericActivity:ActivityBase<dynamic,dynamic>
     {
