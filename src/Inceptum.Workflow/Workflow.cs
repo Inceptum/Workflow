@@ -85,7 +85,6 @@ namespace Inceptum.Workflow
             var execution = new Execution<TContext> { State = WorkflowState.InProgress };
             var executor = new WorkflowExecutor<TContext>(execution, context, this, m_ActivityFactory, m_ActivityExecutor);
             accept(executor);
-            Console.WriteLine("Done: " + execution.State);
             m_Persister.Save(context, execution);
             return execution;
         }
@@ -98,7 +97,6 @@ namespace Inceptum.Workflow
             string node = execution.Log.Select(item => item.Node).LastOrDefault();
             accept(executor, node);
             m_Persister.Save(context, execution);
-            Console.WriteLine("Done: " + execution.State);
             return execution;
         }
 
@@ -108,7 +106,6 @@ namespace Inceptum.Workflow
             var executor = new WorkflowExecutor<TContext>(execution, context, this, m_ActivityFactory, m_ActivityExecutor);
             accept(executor, node);
             m_Persister.Save(context, execution);
-            Console.WriteLine("Done: " + execution.State);
             return execution;
         }
 

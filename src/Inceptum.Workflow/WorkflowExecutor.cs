@@ -123,9 +123,7 @@ namespace Inceptum.Workflow
 
 
             var logItem = m_Execution.AddLog(node.Name);
-            Console.WriteLine(node.Name + " (" + node.ActivityType + "): ");
             m_Resuming = false;
-            Console.WriteLine("\t" + result);
 
             logItem.Status = result;
             if (result == ActivityResult.Pending)
