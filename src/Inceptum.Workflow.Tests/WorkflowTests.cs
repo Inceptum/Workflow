@@ -280,6 +280,7 @@ namespace Inceptum.Workflow.Tests
             wf.Configure(cfg => cfg.Do<TestActivity1, List<string>, List<string>>("node1", list => list, (context, output) => context.Add("TestActivity1"))
                 .On("constraint1").DeterminedAs(list => branchSelector == 0).ContinueWith("node2")
                 .On("constraint2").DeterminedAs(list => branchSelector == 1).End()
+                .On("constraint3").DeterminedAs(list => branchSelector == 2).Fail()
                 .WithBranch().Do<TestActivity2, List<string>, List<string>>("node2", list => list, (context, output) => context.Add("TestActivity2")).End()
                 .WithBranch().Do<TestActivity3, List<string>, List<string>>("node3", list => list, (context, output) => context.Add("TestActivity3")).End());
             var context0 = new List<string>();
@@ -287,11 +288,17 @@ namespace Inceptum.Workflow.Tests
             var context1 = new List<string>();
             branchSelector = 1;
             var execution2 = wf.Run(context1);
+            var context2 = new List<string>();
+            branchSelector = 2;
+            var execution3 = wf.Run(context2);
             Assert.That(execution1.State, Is.EqualTo(WorkflowState.Complete));
             Assert.That(execution2.State, Is.EqualTo(WorkflowState.Complete));
+            Assert.That(execution3.State, Is.EqualTo(WorkflowState.Failed));
             Assert.That(context0, Is.EquivalentTo(new[] {"TestActivity1", "TestActivity2"}), "Wrong activities were executed");
             Assert.That(context1, Is.EquivalentTo(new[] {"TestActivity1"}), "Wrong activities were executed");
+            Assert.That(context2, Is.EquivalentTo(new[] {"TestActivity1"}), "Wrong activities were executed");
         }
+ 
 
         [Test]
         public void ExecutionFlowWithContextConditionAsFirstStepTest()

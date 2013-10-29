@@ -40,6 +40,11 @@ namespace Inceptum.Workflow.Fluent
             return m_Config;
         }
 
+        public IDecisionPoint<TContext> Fail()
+        {
+            return ContinueWith("fail");
+        }
+
         public IDecisionPoint<TContext> End()
         {
             return ContinueWith("end");
