@@ -251,7 +251,7 @@ namespace Inceptum.Workflow.Tests
             var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>());
             wf.Configure(cfg => cfg
                 .Do<TestActivity1, List<string>, List<string>>("node1", list => list, (context, output) => context.Add("TestActivity1"))
-                .Do<TestActivity2, List<string>, List<string>>("node2", list => list, (context, output) => context.Add("TestActivity2"))
+                .Do<FailingTestActivity, List<string>, List<string>>("node2", list => list, (context, output) => context.Add("TestActivity2"))
                 .End());
             var wfContext = new List<string>();
             var execution = wf.Run(wfContext);
