@@ -94,7 +94,6 @@ namespace Inceptum.Workflow
             }
 
 
-            Console.WriteLine("\t"+node.Name + " (" + node.ActivityType + "): " + result);
             m_Resuming = false;
 
             if (result == ActivityResult.Pending)
