@@ -136,6 +136,13 @@ namespace Inceptum.Workflow
                 return WorkflowState.Complete;
             }
 
+           //TODO: =="end" is not good idea
+            if (node.Name == "fail")
+            {
+                m_Execution.State = WorkflowState.Failed;
+                return WorkflowState.Failed;
+            }
+
             m_Execution.State = WorkflowState.Corrupted;
             return WorkflowState.Corrupted;
 

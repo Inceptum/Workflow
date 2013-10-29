@@ -15,6 +15,7 @@ namespace Inceptum.Workflow
     {
         None,
         Corrupted,
+        Failed,
         InProgress,
         Complete
     }

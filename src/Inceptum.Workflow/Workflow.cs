@@ -14,6 +14,7 @@ namespace Inceptum.Workflow
     public class Workflow<TContext> : IActivityFactory , INodesResolver<TContext>, IActivityExecutor 
     {
         private readonly IGraphNode<TContext> m_End;
+        private readonly IGraphNode<TContext> m_Fail;
         private readonly Dictionary<string, IGraphNode<TContext>> m_Nodes = new Dictionary<string, IGraphNode<TContext>>();
         private readonly IGraphNode<TContext> m_Start;
         private readonly IWorkflowPersister<TContext> m_Persister;
@@ -30,7 +31,9 @@ namespace Inceptum.Workflow
             Name = name;
             m_Start = new GraphNode<TContext, EmptyActivity, object, object>("start", context => null, (context, o) => { });
             m_End = new GraphNode<TContext, EndActivity, object, object>("end", context => null, (context, o) => { });
+            m_Fail = new GraphNode<TContext, EndActivity, object, object>("fail", context => null, (context, o) => { });
             registerNode(m_End);
+            registerNode(m_Fail);
         }
 
         public string Name { get; set; }
@@ -74,7 +77,7 @@ namespace Inceptum.Workflow
             string[] errors = Nodes.Values.SelectMany(n => n.Edges.Where(e => !Nodes.ContainsKey(e.Node))
                                                                .Select(e => string.Format("Node '{0}' references unknown node '{1}'", n.Name, e.Node))
                 ).Union(
-                    Nodes.Values.Where(n => n.Name != "end" && !n.Edges.Any()).Select(
+                    Nodes.Values.Where(n => n.Name != "end" &&  n.Name != "fail" && !n.Edges.Any()).Select(
                         n => string.Format("Node '{0}' is not connected with any other node.", n.Name))
                 ).ToArray();
             if (errors.Any())

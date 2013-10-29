@@ -110,6 +110,15 @@ namespace Inceptum.Workflow.Fluent
             return this;
         }
 
+
+
+        public WorkflowConfiguration<TContext> Fail()
+        {
+            Nodes.Peek().AddConstraint("fail", (context, state) => state == ActivityResult.Succeeded, "Fail");
+            return this;
+        }
+
+
         public IExecutionFlow<TContext> WithBranch()
         {
             Nodes.Clear();

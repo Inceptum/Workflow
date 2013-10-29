@@ -251,12 +251,25 @@ namespace Inceptum.Workflow.Tests
             var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>());
             wf.Configure(cfg => cfg
                 .Do<TestActivity1, List<string>, List<string>>("node1", list => list, (context, output) => context.Add("TestActivity1"))
-                .Do<FailingTestActivity, List<string>, List<string>>("node2", list => list, (context, output) => context.Add("TestActivity2"))
+                .Do<TestActivity2, List<string>, List<string>>("node2", list => list, (context, output) => context.Add("TestActivity2"))
                 .End());
             var wfContext = new List<string>();
             var execution = wf.Run(wfContext);
             Assert.That(execution.State, Is.EqualTo(WorkflowState.Corrupted));
+        }
 
+        [Test]
+        public void ExplicitFailBranchTest()
+        {
+            var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>());
+            wf.Configure(cfg => cfg
+                .Do<TestActivity1, List<string>, List<string>>("node1", list => list, (context, output) => context.Add("TestActivity1"))
+                .Do<TestActivity2, List<string>, List<string>>("node2", list => list, (context, output) => context.Add("TestActivity2"))
+                .Fail());
+            var wfContext = new List<string>();
+            var execution = wf.Run(wfContext);
+            Assert.That(execution.State, Is.EqualTo(WorkflowState.Failed));
+            Assert.That(wfContext, Is.EquivalentTo(new[] { "TestActivity1", "TestActivity2" }), "Wrong activities were executed");
         }
 
         [Test]

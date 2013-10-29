@@ -9,4 +9,11 @@ namespace Inceptum.Workflow
             return ActivityResult.Succeeded;
         }
     }
+    public class FailActivity : ActivityBase<object,object>
+    {
+        public override ActivityResult Execute(object input, Action<object> processOutput)
+        {
+            return ActivityResult.Succeeded;
+        }
+    }
 }
