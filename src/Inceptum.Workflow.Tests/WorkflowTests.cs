@@ -246,6 +246,20 @@ namespace Inceptum.Workflow.Tests
         }
 
         [Test]
+        public void WorkflowCorruptsOnActivityFailWithoutExplicitFailBranchTest()
+        {
+            var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>());
+            wf.Configure(cfg => cfg
+                .Do<TestActivity1, List<string>, List<string>>("node1", list => list, (context, output) => context.Add("TestActivity1"))
+                .Do<FailingTestActivity, List<string>, List<string>>("node2", list => list, (context, output) => context.Add("TestActivity2"))
+                .End());
+            var wfContext = new List<string>();
+            var execution = wf.Run(wfContext);
+            Assert.That(execution.State, Is.EqualTo(WorkflowState.Corrupted));
+
+        }
+
+        [Test]
         public void ExecutionFlowWithContextConditionsTest()
         {
             var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>());
