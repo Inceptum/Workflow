@@ -281,8 +281,10 @@ namespace Inceptum.Workflow.Tests
                 .On("constraint1").DeterminedAs(list => branchSelector == 0).ContinueWith("node2")
                 .On("constraint2").DeterminedAs(list => branchSelector == 1).End()
                 .On("constraint3").DeterminedAs(list => branchSelector == 2).Fail()
+                .On("constraint4").DeterminedAs(list => branchSelector == 3).ContinueWith("failingNode")
                 .WithBranch().Do<TestActivity2, List<string>, List<string>>("node2", list => list, (context, output) => context.Add("TestActivity2")).End()
-                .WithBranch().Do<TestActivity3, List<string>, List<string>>("node3", list => list, (context, output) => context.Add("TestActivity3")).End());
+                .WithBranch().Do<TestActivity3, List<string>, List<string>>("node3", list => list, (context, output) => context.Add("TestActivity3")).End()
+                .WithBranch().Do<FailingTestActivity, List<string>, List<string>>("failingNode", list => list, (context, output) => context.Add("TestActivity3")).OnFail().Fail());
             var context0 = new List<string>();
             var execution1 = wf.Run(context0);
             var context1 = new List<string>();
@@ -291,12 +293,19 @@ namespace Inceptum.Workflow.Tests
             var context2 = new List<string>();
             branchSelector = 2;
             var execution3 = wf.Run(context2);
+
+            var context3 = new List<string>();
+            branchSelector = 3;
+            var execution4 = wf.Run(context3);
+            
             Assert.That(execution1.State, Is.EqualTo(WorkflowState.Complete));
             Assert.That(execution2.State, Is.EqualTo(WorkflowState.Complete));
             Assert.That(execution3.State, Is.EqualTo(WorkflowState.Failed));
+            Assert.That(execution4.State, Is.EqualTo(WorkflowState.Failed));
             Assert.That(context0, Is.EquivalentTo(new[] {"TestActivity1", "TestActivity2"}), "Wrong activities were executed");
             Assert.That(context1, Is.EquivalentTo(new[] {"TestActivity1"}), "Wrong activities were executed");
             Assert.That(context2, Is.EquivalentTo(new[] {"TestActivity1"}), "Wrong activities were executed");
+            Assert.That(context3, Is.EquivalentTo(new[] {"TestActivity1"}), "Wrong activities were executed");
         }
  
 

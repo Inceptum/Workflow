@@ -69,6 +69,11 @@ namespace Inceptum.Workflow.Fluent
             m_Nodes.Push(m_Workflow.Start);
         }
 
+        internal  Workflow<TContext> Workflow
+        {
+            get { return m_Workflow; }
+        }
+
         internal Stack<IGraphNode<TContext>> Nodes
         {
             get { return m_Nodes; }

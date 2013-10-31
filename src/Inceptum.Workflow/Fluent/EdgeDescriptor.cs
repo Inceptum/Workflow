@@ -19,7 +19,7 @@ namespace Inceptum.Workflow.Fluent
     {
         private readonly WorkflowConfiguration<TContext> m_Config;
         private readonly string m_Name;
-        private Func<TContext, bool> m_Func;
+        private Func<TContext, ActivityResult, bool> m_Func;
 
         public EdgeDescriptor(WorkflowConfiguration<TContext> config,string name)
         {
@@ -28,15 +28,22 @@ namespace Inceptum.Workflow.Fluent
         }
 
 
-        EdgeDescriptor<TContext> INamedEdge<TContext>.DeterminedAs(Func<TContext, bool> func)
+        internal EdgeDescriptor<TContext> DeterminedAs(Func<TContext, ActivityResult, bool> func)
         {
             m_Func = func;
             return this;
         }
 
+
+        public EdgeDescriptor<TContext> DeterminedAs(Func<TContext, bool> func)
+        {
+            m_Func = (context, state) => state == ActivityResult.Succeeded && func(context);
+            return this;
+        }
+
         public IDecisionPoint<TContext> ContinueWith(string name)
         {
-            m_Config.Nodes.Peek().AddConstraint(name, (context,state) =>state==ActivityResult.Succeeded && m_Func(context), m_Name);
+            m_Config.Nodes.Peek().AddConstraint(name, m_Func, m_Name);
             return m_Config;
         }
 

@@ -8,5 +8,12 @@ namespace Inceptum.Workflow.Fluent
             node.AddConstraint(name, (context, state) => state == ActivityResult.Failed, "Fail");
             return config;
         }
+
+        public static EdgeDescriptor<TContext> OnFail<TContext>(this WorkflowConfiguration<TContext> config)
+        {
+            var edgeDescriptor = new EdgeDescriptor<TContext>(config, "Fail");
+            edgeDescriptor.DeterminedAs((context, result) => result==ActivityResult.Failed);
+            return edgeDescriptor;
+        }
     }
 }
