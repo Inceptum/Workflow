@@ -41,13 +41,13 @@ namespace Inceptum.Workflow.Fluent
             return this;
         }
 
-        public IDecisionPoint<TContext> ContinueWith(string name)
+        public WorkflowConfiguration<TContext> ContinueWith(string name)
         {
             m_Config.Nodes.Peek().AddConstraint(name, m_Func, m_Name);
             return m_Config;
         }
 
-        public IDecisionPoint<TContext> Fail()
+        public WorkflowConfiguration<TContext> Fail()
         {
             return ContinueWith("fail");
         }
