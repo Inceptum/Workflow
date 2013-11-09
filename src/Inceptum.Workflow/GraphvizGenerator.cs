@@ -24,7 +24,7 @@ namespace Inceptum.Workflow
         {
             m_Visited.Add(node);
             string res = "";
-            res += string.Format("\"{0}\" [label={0}, shape=box]", node.Name);
+            res += string.Format("\"{0}\" [label=\"{0}\", shape=box]", node.Name);
             res += Environment.NewLine;
             
             if (node.Edges.Count() > 1)
@@ -37,10 +37,18 @@ namespace Inceptum.Workflow
             foreach (var edge in node.Edges)
             {
                 var nextNode = m_Nodes[edge.Node];
+
+                var nextNodeName = nextNode.Name;
+                if (nextNodeName == "fail")
+                {
+                    res += string.Format("\"{0} fail\" [label=\"fail\"]", node.Name);
+                    res += Environment.NewLine;
+                    nextNodeName = string.Format("{0} fail", node.Name);
+                }
                 if (node.Edges.Count() > 1)
-                    res += string.Format("\"{0} decision\"->\"{1}\"  [label=\"{2}\"]", node.Name, nextNode.Name, edge.Description);
+                    res += string.Format("\"{0} decision\"->\"{1}\"  [label=\"{2}\"]", node.Name, nextNodeName, edge.Description);
                 else
-                    res += string.Format("\"{0}\"->\"{1}\"", node.Name, nextNode.Name);
+                    res += string.Format("\"{0}\"->\"{1}\"", node.Name, nextNodeName);
                 res += Environment.NewLine;
               /*  if (res != "") res += ",";
                 res += string.Format("{0}{2}->{1}",
