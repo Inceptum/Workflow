@@ -269,6 +269,7 @@ namespace Inceptum.Workflow.Tests
             var execution = wf.Run(wfContext);
             Assert.That(execution.State, Is.EqualTo(WorkflowState.Failed));
             Assert.That(wfContext, Is.EquivalentTo(new[] { "TestActivity1", "TestActivity2" }), "Wrong activities were executed");
+           
         }
 
         [Test]
@@ -344,6 +345,8 @@ namespace Inceptum.Workflow.Tests
             var execution = wf.Run(wfContext);
             Assert.That(execution.State, Is.EqualTo(WorkflowState.Complete));
             Assert.That(wfContext, Is.EquivalentTo(new[] {"FailingTestActivity", "TestActivity2"}));
+            Console.WriteLine(wf.ToString());
+            
         }
 
 

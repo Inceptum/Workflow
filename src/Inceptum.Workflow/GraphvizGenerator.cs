@@ -24,14 +24,16 @@ namespace Inceptum.Workflow
         {
             m_Visited.Add(node);
             string res = "";
-            res += string.Format("\"{0}\" [label=\"{0}\", shape=box]", node.Name);
-            res += Environment.NewLine;
-            
-            if (node.Edges.Count() > 1)
+            if (node.Name != "fail")
+            {
+                res += string.Format("\"{0}\" [label=\"{0}\", shape={1}]", node.Name, node.Name == "end" || node.Name == "start" ? "ellipse, style=filled,fillcolor=\"yellow\"" : "box");
+                res += Environment.NewLine;
+            }
+            if (node.Edges.Count() > 1 || (node.Edges.Count()==1 && node.Edges.First().Description != "Success"))
             {
                 res += string.Format("\"{0}\"->\"{0} decision\"", node.Name);
                 res += Environment.NewLine;
-                res += string.Format("\"{0} decision\" [shape=diamond, label=\"\"]", node.Name);
+                res += string.Format("\"{0} decision\" [shape=diamond, label=\"\",style=filled,fillcolor=\"gray\"]", node.Name);
                 res += Environment.NewLine;
             }
             foreach (var edge in node.Edges)
@@ -41,14 +43,17 @@ namespace Inceptum.Workflow
                 var nextNodeName = nextNode.Name;
                 if (nextNodeName == "fail")
                 {
-                    res += string.Format("\"{0} fail\" [label=\"fail\"]", node.Name);
+                    res += string.Format("\"{0} fail\" [label=\"fail\",style=filled,fillcolor=\"red\"]", node.Name);
                     res += Environment.NewLine;
                     nextNodeName = string.Format("{0} fail", node.Name);
                 }
-                if (node.Edges.Count() > 1)
-                    res += string.Format("\"{0} decision\"->\"{1}\"  [label=\"{2}\"]", node.Name, nextNodeName, edge.Description);
+                var edgeDescription = edge.Description;
+                if (edgeDescription == "Success")
+                    edgeDescription = "";
+                if (node.Edges.Count() > 1 || edge.Description != "Success")
+                    res += string.Format("\"{0} decision\"->\"{1}\"  [label=\"{2}\"]", node.Name, nextNodeName, edgeDescription);
                 else
-                    res += string.Format("\"{0}\"->\"{1}\"", node.Name, nextNodeName);
+                    res += string.Format("\"{0}\"->\"{1}\"  [label=\"{2}\"]", node.Name, nextNodeName, edgeDescription);
                 res += Environment.NewLine;
               /*  if (res != "") res += ",";
                 res += string.Format("{0}{2}->{1}",
