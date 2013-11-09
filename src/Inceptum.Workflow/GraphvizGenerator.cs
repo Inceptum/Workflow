@@ -36,7 +36,7 @@ namespace Inceptum.Workflow
                 res += string.Format("\"{0} decision\" [shape=diamond, label=\"\",style=filled,fillcolor=\"gray\"]", node.Name);
                 res += Environment.NewLine;
             }
-            foreach (var edge in node.Edges.OrderBy(e=>e.Description!="fail"))
+            foreach (var edge in node.Edges.OrderBy(e=>e.Description=="Fail"?1:0))
             {
                 var nextNode = m_Nodes[edge.Node];
 
