@@ -53,10 +53,10 @@ namespace Inceptum.Workflow
 
         public string Visit<TActivity, TInput, TOutput>(GraphNode<TContext, TActivity, TInput, TOutput> node) where TActivity : IActivity<TInput, TOutput>
         {
-            return Visit(node as GraphNode<TContext>);
+            return Visit(node as IGraphNode<TContext>);
         }
 
-        public string Visit(GraphNode<TContext> node)
+        public string Visit(IGraphNode<TContext> node)
         {
             m_Visited.Add(node);
             string res = "";
@@ -81,7 +81,7 @@ namespace Inceptum.Workflow
         {
             return string.Format("({0})", translit(node.Name));
         }
-        private string nodeStringFrom(GraphNode<TContext> node) 
+        private string nodeStringFrom(IGraphNode<TContext> node) 
         {
             if (node.Edges.Count() > 1)
                 return string.Format("<{0} decision>", translit(node.Name));

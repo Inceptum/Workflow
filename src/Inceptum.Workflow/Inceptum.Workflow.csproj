@@ -57,6 +57,7 @@
     <Compile Include="Fluent\WorkflowConfigExtensions.cs" />
     <Compile Include="Fluent\WorkflowConfiguration.cs" />
     <Compile Include="GenericActivity.cs" />
+    <Compile Include="GraphvizGenerator.cs" />
     <Compile Include="IActivity.cs" />
     <Compile Include="IActivityFactory.cs" />
     <Compile Include="IGraphNode.cs" />

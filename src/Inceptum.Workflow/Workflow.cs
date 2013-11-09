@@ -157,10 +157,15 @@ namespace Inceptum.Workflow
  
         public override string ToString()
         {
+            var generator = new GraphvizGenerator<TContext>(this);
+            return string.Format(@"digraph {{
+{0}
+}}",accept(generator));
+/*
             var yuml = new YumlActivityGenerator<TContext>(this);
             return "paste the following to http://yuml.me/diagram/nofunky/activity/draw\n" + accept(yuml);
+*/
             // HttpUtility.UrlEncode(m_Graph.ToString());
         }
-
     }
 }
