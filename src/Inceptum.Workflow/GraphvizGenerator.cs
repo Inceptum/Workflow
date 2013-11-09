@@ -24,23 +24,23 @@ namespace Inceptum.Workflow
         {
             m_Visited.Add(node);
             string res = "";
-            res += string.Format("{0} [label={0}]", node.Name);
+            res += string.Format("\"{0}\" [label={0}, shape=box]", node.Name);
             res += Environment.NewLine;
             
             if (node.Edges.Count() > 1)
             {
-                res += string.Format("{0}->{0}_decision", node.Name);
+                res += string.Format("\"{0}\"->\"{0} decision\"", node.Name);
                 res += Environment.NewLine;
-                res += string.Format("{0}_decision [shape=diamond, label=\"\"]", node.Name);
+                res += string.Format("\"{0} decision\" [shape=diamond, label=\"\"]", node.Name);
                 res += Environment.NewLine;
             }
             foreach (var edge in node.Edges)
             {
                 var nextNode = m_Nodes[edge.Node];
                 if (node.Edges.Count() > 1)
-                    res += string.Format("{0}_decision->{1}  [label=\"{2}\"]", node.Name,nextNode.Name,edge.Description);
+                    res += string.Format("\"{0} decision\"->\"{1}\"  [label=\"{2}\"]", node.Name, nextNode.Name, edge.Description);
                 else
-                    res += string.Format("{0}->{1}", node.Name,nextNode.Name);
+                    res += string.Format("\"{0}\"->\"{1}\"", node.Name, nextNode.Name);
                 res += Environment.NewLine;
               /*  if (res != "") res += ",";
                 res += string.Format("{0}{2}->{1}",
