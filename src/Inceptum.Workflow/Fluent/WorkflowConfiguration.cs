@@ -1,14 +1,24 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
+using System.Reflection;
 
 namespace Inceptum.Workflow.Fluent
 {
     public static class ExecutionFlowExtensions
     {
         public static WorkflowConfiguration<TContext> Do<TOutput, TContext>(this IExecutionFlow<TContext> flow, string name,
-            Func<TContext, TOutput> activityMethod)
+           Expression<Func<TContext, TOutput>> method)
         {
-            return flow.Do<DelegateActivity<TOutput>, Func<TOutput>, TOutput>(name, context => (() => activityMethod(context)), ((context, output) => { }));
+            var methodCall = method.Body as MethodCallExpression;
+            string activityType = null;
+
+            if (methodCall != null)
+            {
+                activityType = methodCall.Method.Name;
+            }
+            var activityMethod = method.Compile();
+            return flow.Do<DelegateActivity<TOutput>, Func<TOutput>, TOutput>(name, activityType, context => (() => activityMethod(context)), ((context, output) => { }));
         }
 
         public static WorkflowConfiguration<TContext> Do<TContext>(this IExecutionFlow<TContext> flow, string activity, Func<TContext, object> getActivityInput,
@@ -22,8 +32,9 @@ namespace Inceptum.Workflow.Fluent
 
     public interface IExecutionFlow<TContext>: IHideObjectMembers
     {
-        WorkflowConfiguration<TContext> Do<TActivity, TInput, TOutput>(string name, Func<TContext, TInput> getActivityInput,Action<TContext, TOutput> processOutput) where TActivity : IActivity<TInput, TOutput>;
-        WorkflowConfiguration<TContext> Do<TActivity, TInput, TOutput>(string name, Func<TContext, TInput> getActivityInput) where TActivity : IActivity<TInput, TOutput>;
+        WorkflowConfiguration<TContext> Do<TActivity, TInput, TOutput>(string name, string activityType, Func<TContext, TInput> getActivityInput, Action<TContext, TOutput> processOutput, params object[] activityCreationParams) where TActivity : IActivity<TInput, TOutput>;
+        WorkflowConfiguration<TContext> Do<TActivity, TInput, TOutput>(string name, Func<TContext, TInput> getActivityInput, Action<TContext, TOutput> processOutput, params object[] activityCreationParams) where TActivity : IActivity<TInput, TOutput>;
+        WorkflowConfiguration<TContext> Do<TActivity, TInput, TOutput>(string name, Func<TContext, TInput> getActivityInput, params object[] activityCreationParams) where TActivity : IActivity<TInput, TOutput>;
         WorkflowConfiguration<TContext> Do(string activity, string name, Func<TContext, object> getActivityInput, Action<TContext, dynamic> processOutput);
     }
 
@@ -34,10 +45,8 @@ namespace Inceptum.Workflow.Fluent
 
     class DelegateActivity<TOutput> : ActivityBase<Func<TOutput>, TOutput>
     {
-
-        public DelegateActivity( )
+        public DelegateActivity()
         {
-            
         }
 
         public override ActivityResult Execute(Func<TOutput> activityMethod, Action<TOutput> processOutput)
@@ -79,7 +88,7 @@ namespace Inceptum.Workflow.Fluent
             get { return m_Nodes; }
         }
 
-        public WorkflowConfiguration<TContext> Do(string activity,string name,Func<TContext,object> getActivityInput,Action<TContext,dynamic> processOutput ) 
+        public WorkflowConfiguration<TContext> Do(string activity, string name, Func<TContext, object> getActivityInput, Action<TContext, dynamic> processOutput) 
         {
             var activityNode = m_Workflow.CreateNode(name, activity, getActivityInput, processOutput);
             if (Nodes.Count > 0)
@@ -88,19 +97,25 @@ namespace Inceptum.Workflow.Fluent
             return this;
         }
 
-        public WorkflowConfiguration<TContext> Do<TActivity, TInput, TOutput>(string name, Func<TContext, TInput> getActivityInput ) where TActivity : IActivity<TInput, TOutput>
+        public WorkflowConfiguration<TContext> Do<TActivity, TInput, TOutput>(string name, Func<TContext, TInput> getActivityInput, params object[] activityCreationParams) where TActivity : IActivity<TInput, TOutput>
         {
             return Do<TActivity, TInput, TOutput>(name, getActivityInput, (c, o) => { });
         }
 
 
-        public WorkflowConfiguration<TContext> Do<TActivity, TInput, TOutput>(string name, Func<TContext, TInput> getActivityInput, Action<TContext, TOutput> processOutput) where TActivity : IActivity<TInput, TOutput>
+        public WorkflowConfiguration<TContext> Do<TActivity, TInput, TOutput>(string name, string activityType, Func<TContext, TInput> getActivityInput,
+                                                                    Action<TContext, TOutput> processOutput, params object[] activityCreationParams) where TActivity : IActivity<TInput, TOutput>
         {
-            var activityNode = m_Workflow.CreateNode<TActivity, TInput, TOutput>(name, getActivityInput,processOutput);
-            if(Nodes.Count>0)
+            var activityNode = m_Workflow.CreateNode<TActivity, TInput, TOutput>(name,activityType, getActivityInput, processOutput, activityCreationParams);
+            if (Nodes.Count > 0)
                 Nodes.Peek().AddConstraint(name, (context, state) => state == ActivityResult.Succeeded, "Success");
             Nodes.Push(activityNode);
             return this;
+        }
+
+        public WorkflowConfiguration<TContext> Do<TActivity, TInput, TOutput>(string name, Func<TContext, TInput> getActivityInput, Action<TContext, TOutput> processOutput, params object[] activityCreationParams) where TActivity : IActivity<TInput, TOutput>
+        {
+            return Do<TActivity, TInput, TOutput>(name, null, getActivityInput, processOutput, activityCreationParams);
         }
 
         public WorkflowConfiguration<TContext> ContinueWith(string node)

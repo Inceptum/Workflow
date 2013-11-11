@@ -13,6 +13,7 @@ namespace Inceptum.Workflow
     internal interface IGraphNode<TContext>
     {
         string Name { get; }
+        string ActivityType { get;  }
         IEnumerable<GraphEdge<TContext>> Edges { get; }
         T Accept<T>(IWorkflowVisitor<TContext, T> workflowExecutor);
         void AddConstraint(string node, Func<TContext, ActivityResult, bool> condition, string description);

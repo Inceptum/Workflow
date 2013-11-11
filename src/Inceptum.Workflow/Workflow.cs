@@ -51,9 +51,9 @@ namespace Inceptum.Workflow
 
         #region IActivityFactory<TContext> Members
 
-        TActivity IActivityFactory.Create<TActivity, TInput, TOutput>()
+        TActivity IActivityFactory.Create<TActivity, TInput, TOutput>(params object[] activityCreationParams)
         {
-            return Activator.CreateInstance<TActivity>();
+            return (TActivity) Activator.CreateInstance(typeof(TActivity),activityCreationParams);
         }
 
         #endregion
@@ -115,10 +115,10 @@ namespace Inceptum.Workflow
         }
 
 
-        internal IGraphNode<TContext> CreateNode<TActivity, TInput, TOutput>(string name, Func<TContext, TInput> getActivityInput, Action<TContext, TOutput> processOutput, params string[] aliases)
+        internal IGraphNode<TContext> CreateNode<TActivity, TInput, TOutput>(string name, string activityType, Func<TContext, TInput> getActivityInput, Action<TContext, TOutput> processOutput, object[] activityCreationParams, params string[] aliases)
             where TActivity : IActivity<TInput, TOutput>
         {
-            var node = new GraphNode<TContext, TActivity, TInput, TOutput>(name, getActivityInput, processOutput);
+            var node = new GraphNode<TContext, TActivity, TInput, TOutput>(name,activityType, getActivityInput, processOutput,activityCreationParams);
             registerNode(node, aliases);
             return node;
         }

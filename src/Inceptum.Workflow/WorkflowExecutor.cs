@@ -67,7 +67,7 @@ namespace Inceptum.Workflow
             if (typeof (TActivity) == typeof (GenericActivity))
                 activity = (TActivity)(object)new GenericActivity(m_ActivityExecutor, node.ActivityType, node.Name);
             else
-                activity = m_Factory.Create<TActivity, TInput, TOutput>();
+                activity = m_Factory.Create<TActivity, TInput, TOutput>(node.ActivityCreationParams);
 
             object activityOutput = null;
             ActivityResult result;

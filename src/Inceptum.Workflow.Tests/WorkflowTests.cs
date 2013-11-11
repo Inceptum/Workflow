@@ -437,6 +437,24 @@ namespace Inceptum.Workflow.Tests
             Assert.That(executor.Input.Count, Is.EqualTo(2), "Executor was called with wrong data");
 
         }
+        [Test]
+        public void DelegateActivityTest()
+        {
+            var executor = new FakeExecutor();
+            var wf = new Workflow<JObject>("", new InMemoryPersister<JObject>(), activityExecutor: executor);
+            wf.Configure(cfg => cfg.Do("node",c=>activityMethod(c)).End());
+            var wfContext=new JObject();
+            wf.Run(wfContext);
+            dynamic o = wfContext;
+            Assert.That(wf.Nodes["node"].ActivityType, Is.EqualTo("activityMethod"),"Wrong activity type");
+            Assert.That(((string)(o.Value)), Is.EqualTo("!!!"), "delegate was not executed");
+        }
+ 
+        public string activityMethod(JObject context)
+        {
+            dynamic jObject = context;
+            return jObject.Value="!!!";
+        }
     }
 
     public class FakeExecutor : IActivityExecutor

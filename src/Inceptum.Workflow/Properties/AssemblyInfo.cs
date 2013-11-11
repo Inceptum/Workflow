@@ -10,3 +10,4 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: ComVisible(false)]
 [assembly: Guid("87a3a165-9e10-4d05-a4a6-1fb6b5ed7727")]
+[assembly :InternalsVisibleTo("Inceptum.Workflow.Tests")]
