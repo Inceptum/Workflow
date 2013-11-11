@@ -10,18 +10,18 @@ namespace Inceptum.Workflow
         public ActivityResult Status { get; set; }
     }
 
-    class NullExecutionLogger : IExecutionLogger
+    class NullExecutionObserver : IExecutionObserver
     {
-        public void ActivityStarted(string node, string activityType, string inputValues)
+        public void ActivityStarted(string node, string activityType, object inputValues)
         {
             
         }
 
-        public void ActivityFinished(string node, string activityType, string outputValues)
+        public void ActivityFinished(string node, string activityType, object outputValues)
         {
         }
 
-        public void ActivityFailed(string node, string activityType)
+        public void ActivityFailed(string node, string activityType, object outputValues)
         {
         }
 
@@ -39,18 +39,18 @@ namespace Inceptum.Workflow
         private readonly IActivityExecutor m_ActivityExecutor;
         private bool m_Resuming = false;
         private readonly object m_Closure;
-        private IExecutionLogger m_Logger;
+        private readonly IExecutionObserver m_ExecutionObserver;
 
-        public WorkflowExecutor(Execution<TContext> execution, TContext context, INodesResolver<TContext> nodes, IActivityFactory factory,IActivityExecutor  activityExecutor,IExecutionLogger logger,object closure)
-            :this(execution,context,nodes,factory,activityExecutor,logger)
+        public WorkflowExecutor(Execution<TContext> execution, TContext context, INodesResolver<TContext> nodes, IActivityFactory factory,IActivityExecutor  activityExecutor,IExecutionObserver observer,object closure)
+            :this(execution,context,nodes,factory,activityExecutor,observer)
         {
             m_Resuming = true;
             m_Closure = closure;
         }
 
-        public WorkflowExecutor(Execution<TContext> execution, TContext context, INodesResolver<TContext> nodes, IActivityFactory factory, IActivityExecutor activityExecutor, IExecutionLogger logger)
+        public WorkflowExecutor(Execution<TContext> execution, TContext context, INodesResolver<TContext> nodes, IActivityFactory factory, IActivityExecutor activityExecutor, IExecutionObserver observer)
         {
-            m_Logger = logger??new NullExecutionLogger();
+            m_ExecutionObserver = observer??new NullExecutionObserver();
             m_Context = context;
             m_Factory = factory;
             m_Execution = execution;
@@ -69,30 +69,28 @@ namespace Inceptum.Workflow
             else
                 activity = m_Factory.Create<TActivity, TInput, TOutput>();
 
-            string activityOutput = null;
+            object activityOutput = null;
             ActivityResult result;
             m_Execution.ActiveNode = node.Name;
             if (m_Resuming)
             {
                 result = activity.Resume(output =>
                 {
-                    activityOutput = output.ToString();
+                    activityOutput = output;
                     node.ProcessOutput(m_Context, output);
                 }, m_Closure);
              }
             else
             {
                 var activityInput = node.GetActivityInput(m_Context);
-                var input = activityInput == null?"":activityInput.ToString();
-                m_Logger.ActivityStarted(node.Name, node.ActivityType, input);
+
+                m_ExecutionObserver.ActivityStarted(node.Name, node.ActivityType, activityInput);
                 result = activity.Execute(activityInput, output =>
                     {
-                        activityOutput = output==null?"":output.ToString();
+                        activityOutput = output;
                         node.ProcessOutput(m_Context, output);
                     });
-
             }
-
 
             m_Resuming = false;
 
@@ -105,18 +103,18 @@ namespace Inceptum.Workflow
             if (result == ActivityResult.None)
             {
                 m_Execution.State = WorkflowState.Corrupted;
-                m_Logger.ActivityCorrupted(node.Name, node.ActivityType);
+                m_ExecutionObserver.ActivityCorrupted(node.Name, node.ActivityType);
                 return WorkflowState.Corrupted;
             }
 
             if (result == ActivityResult.Failed)
             {
-                m_Logger.ActivityFailed(node.Name, node.ActivityType);
+                m_ExecutionObserver.ActivityFailed(node.Name, node.ActivityType, activityOutput);
             }
 
             if (result == ActivityResult.Succeeded)
             {
-                m_Logger.ActivityFinished(node.Name, node.ActivityType,activityOutput);
+                m_ExecutionObserver.ActivityFinished(node.Name, node.ActivityType,activityOutput);
             }
 
             var next = node.Edges.SingleOrDefault(e => e.Condition(m_Context, result));

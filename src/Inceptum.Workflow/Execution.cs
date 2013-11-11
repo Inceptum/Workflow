@@ -9,11 +9,11 @@ namespace Inceptum.Workflow
         public WorkflowState State { get; set; }
     }
 
-    public interface IExecutionLogger
+    public interface IExecutionObserver
     {
-        void ActivityStarted(string node, string activityType, string inputValues);
-        void ActivityFinished(string node, string activityType, string outputValues);
-        void ActivityFailed(string node, string activityType);
+        void ActivityStarted(string node, string activityType, object inputValues);
+        void ActivityFinished(string node, string activityType, object outputValues);
+        void ActivityFailed(string node, string activityType, object outputValues);
         void ActivityCorrupted(string node, string activityType);
     }
 }
