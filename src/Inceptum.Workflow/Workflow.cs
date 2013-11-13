@@ -29,9 +29,9 @@ namespace Inceptum.Workflow
             m_ActivityFactory = activityFactory ?? this;
             m_Persister = persister;
             Name = name;
-            m_Start = new GraphNode<TContext, EmptyActivity, object, object>("start", context => null, (context, o) => { });
-            m_End = new GraphNode<TContext, EndActivity, object, object>("end", context => null, (context, o) => { });
-            m_Fail = new GraphNode<TContext, EndActivity, object, object>("fail", context => null, (context, o) => { });
+            m_Start = new GraphNode<TContext, EmptyActivity, object, object, object>("start", context => null, (context, o) => { }, (context, o) => { });
+            m_End = new GraphNode<TContext, EndActivity, object, object, object>("end", context => null, (context, o) => { }, (context, o) => { });
+            m_Fail = new GraphNode<TContext, EndActivity, object, object, object>("fail", context => null, (context, o) => { }, (context, o) => { });
             registerNode(m_End);
             registerNode(m_Fail);
         }
@@ -51,7 +51,7 @@ namespace Inceptum.Workflow
 
         #region IActivityFactory<TContext> Members
 
-        TActivity IActivityFactory.Create<TActivity, TInput, TOutput>(params object[] activityCreationParams)
+        TActivity IActivityFactory.Create<TActivity, TInput, TOutput, TFailOutput>(params object[] activityCreationParams)
         {
             return (TActivity) Activator.CreateInstance(typeof(TActivity),activityCreationParams);
         }
@@ -115,17 +115,17 @@ namespace Inceptum.Workflow
         }
 
 
-        internal IGraphNode<TContext> CreateNode<TActivity, TInput, TOutput>(string name, string activityType, Func<TContext, TInput> getActivityInput, Action<TContext, TOutput> processOutput, object[] activityCreationParams, params string[] aliases)
-            where TActivity : IActivity<TInput, TOutput>
+        internal IGraphNode<TContext> CreateNode<TActivity, TInput, TOutput, TFailOutput>(string name, string activityType, Func<TContext, TInput> getActivityInput, Action<TContext, TOutput> processOutput, Action<TContext, TFailOutput> processFailOutput, object[] activityCreationParams, params string[] aliases)
+            where TActivity : IActivity<TInput, TOutput, TFailOutput>
         {
-            var node = new GraphNode<TContext, TActivity, TInput, TOutput>(name,activityType, getActivityInput, processOutput,activityCreationParams);
+            var node = new GraphNode<TContext, TActivity, TInput, TOutput, TFailOutput>(name, activityType, getActivityInput, processOutput, processFailOutput, activityCreationParams);
             registerNode(node, aliases);
             return node;
         }
 
-        internal IGraphNode<TContext> CreateNode(string name, string activityType, Func<TContext, dynamic> getActivityInput, Action<TContext, dynamic> processOutput, params string[] aliases)
+        internal IGraphNode<TContext> CreateNode(string name, string activityType, Func<TContext, dynamic> getActivityInput, Action<TContext, dynamic> processOutput, Action<TContext, dynamic> processFailOutput, params string[] aliases)
         {
-            var node = new GraphNode<TContext>(name, activityType, getActivityInput, processOutput);
+            var node = new GraphNode<TContext>(name, activityType, getActivityInput, processOutput,processFailOutput);
             registerNode(node, aliases);
             return node;
         }
@@ -150,7 +150,7 @@ namespace Inceptum.Workflow
  
 
 
-        public ActivityResult Execute(string activityType, string nodeName, dynamic input, Action<dynamic> processOutput)
+        public ActivityResult Execute(string activityType, string nodeName, dynamic input, Action<dynamic> processOutput, Action<dynamic> processFailOutput)
         {
             return ActivityResult.Failed;
         }

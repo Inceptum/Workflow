@@ -12,17 +12,17 @@ namespace Inceptum.Workflow
   
 
 
-    internal class GraphNode<TContext> : GraphNode<TContext,GenericActivity, dynamic, dynamic>
+    internal class GraphNode<TContext> : GraphNode<TContext,GenericActivity, dynamic, dynamic,dynamic>
     {
-        public GraphNode(string name, string activityType, Func<TContext, dynamic> getActivityInput, Action<TContext, dynamic> processOutput,params object[] activityCreationParams)
-            : base(name, activityType, getActivityInput, processOutput,activityCreationParams)
+        public GraphNode(string name, string activityType, Func<TContext, dynamic> getActivityInput, Action<TContext, dynamic> processOutput, Action<TContext, dynamic> processFailOutput, params object[] activityCreationParams)
+            : base(name, activityType, getActivityInput, processOutput,processFailOutput, activityCreationParams)
         {
         }
     }
-   
 
-          
-    internal class GraphNode<TContext, TActivity, TInput, TOutput> : IGraphNode<TContext> where TActivity : IActivity<TInput, TOutput>
+
+
+    internal class GraphNode<TContext, TActivity, TInput, TOutput, TFailOutput> : IGraphNode<TContext> where TActivity : IActivity<TInput, TOutput, TFailOutput>
     {
         private readonly Func<TContext, TInput> m_GetActivityInput;
         private readonly Action<TContext, TOutput> m_ProcessOutput;
@@ -32,14 +32,15 @@ namespace Inceptum.Workflow
         public object[] ActivityCreationParams { get; set; }
 
 
-        public GraphNode(string name, Func<TContext, TInput> getActivityInput, Action<TContext, TOutput> processOutput,params object[] activityCreationParams)
-            : this(name, null, getActivityInput, processOutput, activityCreationParams)
+        public GraphNode(string name, Func<TContext, TInput> getActivityInput, Action<TContext, TOutput> processOutput, Action<TContext, TFailOutput> processFailOutput, params object[] activityCreationParams)
+            : this(name, null, getActivityInput, processOutput,processFailOutput, activityCreationParams)
         {
         }
 
-        public GraphNode(string name, string activityType, Func<TContext, TInput> getActivityInput, Action<TContext, TOutput> processOutput,params object[] activityCreationParams)
+        public GraphNode(string name, string activityType, Func<TContext, TInput> getActivityInput, Action<TContext, TOutput> processOutput, Action<TContext, TFailOutput> processFailOutput,params object[] activityCreationParams)
 
         {
+            m_ProcessFailOutput = processFailOutput;
             ActivityCreationParams = activityCreationParams;
             Name = name;
             ActivityType = activityType ?? typeof(TActivity).Name;
@@ -64,7 +65,14 @@ namespace Inceptum.Workflow
             m_ProcessOutput(context, output);
         }
 
+  
+        public void ProcessFailOutput(TContext context, TFailOutput output)
+        {
+            m_ProcessFailOutput(context, output);
+        }
+
         private readonly List<GraphEdge<TContext>> m_Constraints = new List<GraphEdge<TContext>>();
+        private Action<TContext, TFailOutput> m_ProcessFailOutput;
 
         public virtual void AddConstraint(string node, Func<TContext, ActivityResult, bool> condition, string description)
         {

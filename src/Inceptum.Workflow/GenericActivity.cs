@@ -4,9 +4,9 @@ namespace Inceptum.Workflow
 {
     public interface IActivityExecutor
     {
-        ActivityResult Execute(string activityType, string nodeName, object input, Action<dynamic> processOutput);
+        ActivityResult Execute(string activityType, string nodeName, object input, Action<dynamic> processOutput, Action<dynamic> processFailOutput);
     }
-    public class GenericActivity:ActivityBase<dynamic,dynamic>
+    public class GenericActivity:ActivityBase<dynamic,dynamic,dynamic>
     {
         private readonly IActivityExecutor m_Executor;
         private readonly string m_ActivityType;
@@ -19,9 +19,9 @@ namespace Inceptum.Workflow
             m_Executor = executor;
         }
 
-        public override ActivityResult Execute(dynamic input, Action<dynamic> processOutput)
+        public override ActivityResult Execute(dynamic input, Action<dynamic> processOutput, Action<dynamic> processFailOutput)
         {
-            return m_Executor.Execute(m_ActivityType, m_NodeName,input, processOutput);
+            return m_Executor.Execute(m_ActivityType, m_NodeName, input, processOutput, processFailOutput);
         }
 
         public override ActivityResult Resume<TClosure>(Action<dynamic> processOutput, TClosure closure)

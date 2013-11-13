@@ -61,13 +61,13 @@ namespace Inceptum.Workflow
 
 
 
-        public WorkflowState Visit<TActivity, TInput, TOutput>(GraphNode<TContext, TActivity, TInput, TOutput> node) where TActivity : IActivity<TInput, TOutput>
+        public WorkflowState Visit<TActivity, TInput, TOutput, TFailOutput>(GraphNode<TContext, TActivity, TInput, TOutput, TFailOutput> node) where TActivity : IActivity<TInput, TOutput, TFailOutput>
         {
             TActivity activity;
             if (typeof (TActivity) == typeof (GenericActivity))
                 activity = (TActivity)(object)new GenericActivity(m_ActivityExecutor, node.ActivityType, node.Name);
             else
-                activity = m_Factory.Create<TActivity, TInput, TOutput>(node.ActivityCreationParams);
+                activity = m_Factory.Create<TActivity, TInput, TOutput, TFailOutput>(node.ActivityCreationParams);
 
             object activityOutput = null;
             ActivityResult result;
@@ -89,6 +89,10 @@ namespace Inceptum.Workflow
                     {
                         activityOutput = output;
                         node.ProcessOutput(m_Context, output);
+                    }, failOutput =>
+                    {
+                        activityOutput = failOutput;
+                        node.ProcessFailOutput(m_Context, failOutput);
                     });
             }
 

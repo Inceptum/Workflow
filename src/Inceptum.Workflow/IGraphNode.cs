@@ -7,7 +7,7 @@ namespace Inceptum.Workflow
 
     internal interface IWorkflowVisitor<TContext,  out TResult>
     {
-        TResult Visit<TActivity, TInput, TOutput>(GraphNode<TContext, TActivity, TInput, TOutput> node) where TActivity : IActivity<TInput, TOutput>;
+        TResult Visit<TActivity, TInput, TOutput, TFailOutput>(GraphNode<TContext, TActivity, TInput, TOutput, TFailOutput> node) where TActivity : IActivity<TInput, TOutput, TFailOutput>;
     }
 
     internal interface IGraphNode<TContext>

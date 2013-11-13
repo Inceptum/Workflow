@@ -15,7 +15,7 @@ namespace Inceptum.Workflow
         }
 
 
-        public string Visit<TActivity, TInput, TOutput>(GraphNode<TContext, TActivity, TInput, TOutput> node) where TActivity : IActivity<TInput, TOutput>
+        public string Visit<TActivity, TInput, TOutput, TFailOutput>(GraphNode<TContext, TActivity, TInput, TOutput, TFailOutput> node) where TActivity : IActivity<TInput, TOutput, TFailOutput>
         {
             return Visit(node as IGraphNode<TContext>);
         }

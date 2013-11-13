@@ -28,7 +28,7 @@ namespace Inceptum.Workflow.Tests
 
         private class FailingTestActivity : TestActivity
         {
-            public override ActivityResult Execute(List<string> input, Action<List<string>> processOutput)
+            public override ActivityResult Execute(List<string> input, Action<List<string>> processOutput, Action<List<string>> processFailOutput)
             {
                 return ActivityResult.Failed;
             }
@@ -36,7 +36,7 @@ namespace Inceptum.Workflow.Tests
 
         private class AsyncTestActivity : TestActivity
         {
-            public override ActivityResult Execute(List<string> input, Action<List<string>> processOutput)
+            public override ActivityResult Execute(List<string> input, Action<List<string>> processOutput, Action<List<string>> processFailOutput)
             {
                 return ActivityResult.Pending;
             }
@@ -57,7 +57,7 @@ namespace Inceptum.Workflow.Tests
                 return ActivityResult.Succeeded;
             }
 
-            public override ActivityResult Execute(List<string> input, Action<List<string>> processOutput)
+            public override ActivityResult Execute(List<string> input, Action<List<string>> processOutput, Action<List<string>> processFailOutput)
             {
                 processOutput(new List<string>(input.ToArray().Reverse().ToArray()));
                 return ActivityResult.Succeeded;
@@ -67,7 +67,7 @@ namespace Inceptum.Workflow.Tests
 
         private class ValidateInputData : ActivityBase<Executable, Executable>
         {
-            public override ActivityResult Execute(Executable input, Action<Executable> processOutput)
+            public override ActivityResult Execute(Executable input, Action<Executable> processOutput, Action<Executable> processFailOutput)
             {
                 processOutput(input);
                 return ActivityResult.Succeeded;
@@ -77,7 +77,7 @@ namespace Inceptum.Workflow.Tests
 
         private class GenerateConfirmationDocument : ActivityBase<Executable, Executable>
         {
-            public override ActivityResult Execute(Executable input, Action<Executable> processOutput)
+            public override ActivityResult Execute(Executable input, Action<Executable> processOutput, Action<Executable> processFailOutput)
             {
                 return ActivityResult.Succeeded;
             }
@@ -87,7 +87,7 @@ namespace Inceptum.Workflow.Tests
         {
             private Executable m_Input;
 
-            public override ActivityResult Execute(Executable input, Action<Executable> processOutput)
+            public override ActivityResult Execute(Executable input, Action<Executable> processOutput, Action<Executable> processFailOutput)
             {
                 m_Input = input;
                 Console.WriteLine("\tDias doc requested");
@@ -111,7 +111,7 @@ namespace Inceptum.Workflow.Tests
 
         private class CardDebit : ActivityBase<Executable, Executable>
         {
-            public override ActivityResult Execute(Executable input, Action<Executable> processOutput)
+            public override ActivityResult Execute(Executable input, Action<Executable> processOutput, Action<Executable> processFailOutput)
             {
                 return ActivityResult.Succeeded;
             }
@@ -120,7 +120,7 @@ namespace Inceptum.Workflow.Tests
 
         private class CardSettlement : ActivityBase<Executable, Executable>
         {
-            public override ActivityResult Execute(Executable input, Action<Executable> processOutput)
+            public override ActivityResult Execute(Executable input, Action<Executable> processOutput, Action<Executable> processFailOutput)
             {
                 return ActivityResult.Succeeded;
             }
@@ -129,7 +129,7 @@ namespace Inceptum.Workflow.Tests
 
         private class GenerateProofDocument : ActivityBase<Executable, Executable>
         {
-            public override ActivityResult Execute(Executable input, Action<Executable> processOutput)
+            public override ActivityResult Execute(Executable input, Action<Executable> processOutput, Action<Executable> processFailOutput)
             {
                 return ActivityResult.Failed;
             }
@@ -137,7 +137,7 @@ namespace Inceptum.Workflow.Tests
 
         private class NotefyAdmins : ActivityBase<Executable, Executable>
         {
-            public override ActivityResult Execute(Executable input, Action<Executable> processOutput)
+            public override ActivityResult Execute(Executable input, Action<Executable> processOutput, Action<Executable> processFailOutput)
             {
                 return ActivityResult.Succeeded;
             }
@@ -214,7 +214,7 @@ namespace Inceptum.Workflow.Tests
         {
             var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>());
             wf.Configure(
-                cfg => cfg.Do<TestActivity1, List<string>, List<string>>("node1", list => list, (input, output) => { }).ContinueWith("Not existing node"));
+                cfg => cfg.Do<TestActivity1, List<string>, List<string>>("node1", list => list, (input, output) => { } ).ContinueWith("Not existing node"));
 
         }
 
@@ -460,7 +460,7 @@ namespace Inceptum.Workflow.Tests
     public class FakeExecutor : IActivityExecutor
     {
         public List<object> Input=new List<object>();
-        public ActivityResult Execute(string activityType, string nodeName, dynamic input, Action<dynamic> processOutput)
+        public ActivityResult Execute(string activityType, string nodeName, dynamic input, Action<dynamic> processOutput, Action<dynamic> processFailOutput)
         {
             Input.Add(input);
             return ActivityResult.Pending;

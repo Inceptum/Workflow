@@ -5,7 +5,7 @@ using System.Reflection;
 
 namespace Inceptum.Workflow.Fluent
 {
-    public static class ExecutionFlowExtensions
+    public static class ExecutionFlowExtensions 
     {
         public static WorkflowConfiguration<TContext> Do<TOutput, TContext>(this IExecutionFlow<TContext> flow, string name,
            Expression<Func<TContext, TOutput>> method)
@@ -18,24 +18,31 @@ namespace Inceptum.Workflow.Fluent
                 activityType = methodCall.Method.Name;
             }
             var activityMethod = method.Compile();
-            return flow.Do<DelegateActivity<TOutput>, Func<TOutput>, TOutput>(name, activityType, context => (() => activityMethod(context)), ((context, output) => { }));
+            return flow.Do<DelegateActivity<TOutput>, Func<TOutput>, TOutput,Exception>(name, activityType, context => (() => activityMethod(context)), ((context, output) => { }) ,((context, output) => { }));
         }
 
+
         public static WorkflowConfiguration<TContext> Do<TContext>(this IExecutionFlow<TContext> flow, string activity, Func<TContext, object> getActivityInput,
-            Action<TContext, dynamic> processOutput)
+            Action<TContext, dynamic> processOutput=null,
+            Action<TContext, dynamic> processFailOutput=null)
         {
-            return flow.Do(activity, activity, getActivityInput, processOutput ?? ((context, o) => { }));
+            return flow.Do(activity, activity, getActivityInput, processOutput ?? ((context, o) => { }), processFailOutput ?? ((context, o) => { }));
         }
+
 
 
     }
 
     public interface IExecutionFlow<TContext>: IHideObjectMembers
     {
-        WorkflowConfiguration<TContext> Do<TActivity, TInput, TOutput>(string name, string activityType, Func<TContext, TInput> getActivityInput, Action<TContext, TOutput> processOutput, params object[] activityCreationParams) where TActivity : IActivity<TInput, TOutput>;
-        WorkflowConfiguration<TContext> Do<TActivity, TInput, TOutput>(string name, Func<TContext, TInput> getActivityInput, Action<TContext, TOutput> processOutput, params object[] activityCreationParams) where TActivity : IActivity<TInput, TOutput>;
-        WorkflowConfiguration<TContext> Do<TActivity, TInput, TOutput>(string name, Func<TContext, TInput> getActivityInput, params object[] activityCreationParams) where TActivity : IActivity<TInput, TOutput>;
-        WorkflowConfiguration<TContext> Do(string activity, string name, Func<TContext, object> getActivityInput, Action<TContext, dynamic> processOutput);
+        WorkflowConfiguration<TContext> Do<TActivity, TInput, TOutput, TFailOutput>(string name, string activityType, Func<TContext, TInput> getActivityInput, Action<TContext, TOutput> processOutput, Action<TContext, TFailOutput> processFailOutput, params object[] activityCreationParams) where TActivity : IActivity<TInput, TOutput, TFailOutput>;
+        WorkflowConfiguration<TContext> Do<TActivity, TInput, TOutput, TFailOutput>(string name, Func<TContext, TInput> getActivityInput, Action<TContext, TOutput> processOutput, Action<TContext, TFailOutput> processFailOutput, params object[] activityCreationParams) where TActivity : IActivity<TInput, TOutput, TFailOutput>;
+        WorkflowConfiguration<TContext> Do<TActivity, TInput, TOutput, TFailOutput>(string name, Func<TContext, TInput> getActivityInput, params object[] activityCreationParams) where TActivity : IActivity<TInput, TOutput, TFailOutput>;
+        WorkflowConfiguration<TContext> Do(string activity, string name, Func<TContext, object> getActivityInput, Action<TContext, dynamic> processOutput, Action<TContext, dynamic> processFailOutput=null);
+
+        WorkflowConfiguration<TContext> Do<TActivity, TInput, TOutput>(string name, string activityType, Func<TContext, TInput> getActivityInput, Action<TContext, TOutput> processOutput, Action<TContext, TOutput> processFailOutput, params object[] activityCreationParams) where TActivity : IActivity<TInput, TOutput, TOutput>;
+        WorkflowConfiguration<TContext> Do<TActivity, TInput, TOutput>(string name, Func<TContext, TInput> getActivityInput, Action<TContext, TOutput> processOutput, Action<TContext, TOutput> processFailOutput=null, params object[] activityCreationParams) where TActivity : IActivity<TInput, TOutput, TOutput>;
+        WorkflowConfiguration<TContext> Do<TActivity, TInput, TOutput>(string name, Func<TContext, TInput> getActivityInput, params object[] activityCreationParams) where TActivity : IActivity<TInput, TOutput, TOutput>;
     }
 
     public interface IBranchingPoint<TContext>: IHideObjectMembers
@@ -43,22 +50,22 @@ namespace Inceptum.Workflow.Fluent
         IExecutionFlow<TContext> WithBranch();
     }
 
-    class DelegateActivity<TOutput> : ActivityBase<Func<TOutput>, TOutput>
+    class DelegateActivity<TOutput> : ActivityBase<Func<TOutput>, TOutput,Exception>
     {
         public DelegateActivity()
         {
         }
 
-        public override ActivityResult Execute(Func<TOutput> activityMethod, Action<TOutput> processOutput)
+        public override ActivityResult Execute(Func<TOutput> activityMethod, Action<TOutput> processOutput, Action<Exception> processFailOutput)
         {
             try
             {
                 processOutput(activityMethod());
 
             }
-            catch (Exception)
+            catch (Exception e)
             {
-
+                processFailOutput(e);
                 return ActivityResult.Failed;
 
             }
@@ -88,34 +95,51 @@ namespace Inceptum.Workflow.Fluent
             get { return m_Nodes; }
         }
 
-        public WorkflowConfiguration<TContext> Do(string activity, string name, Func<TContext, object> getActivityInput, Action<TContext, dynamic> processOutput) 
+
+        public WorkflowConfiguration<TContext> Do<TActivity, TInput, TOutput>(string name, string activityType, Func<TContext, TInput> getActivityInput, Action<TContext, TOutput> processOutput, Action<TContext, TOutput> processFailOutput=null,
+            params object[] activityCreationParams) where TActivity : IActivity<TInput, TOutput, TOutput>
         {
-            var activityNode = m_Workflow.CreateNode(name, activity, getActivityInput, processOutput);
+            return Do<TActivity, TInput, TOutput, TOutput>(name, activityType, getActivityInput, processOutput, processFailOutput ?? ((context, output) => { }), activityCreationParams);
+        }
+ 
+        public WorkflowConfiguration<TContext> Do<TActivity, TInput, TOutput>(string name, Func<TContext, TInput> getActivityInput, Action<TContext, TOutput> processOutput, Action<TContext, TOutput> processFailOutput=null,
+            params object[] activityCreationParams) where TActivity : IActivity<TInput, TOutput, TOutput>
+        {
+            return Do<TActivity, TInput, TOutput, TOutput>(name, getActivityInput, processOutput, processFailOutput ?? ((context, output) => { }), activityCreationParams);
+        }
+
+        public WorkflowConfiguration<TContext> Do<TActivity, TInput, TOutput>(string name, Func<TContext, TInput> getActivityInput, params object[] activityCreationParams) where TActivity : IActivity<TInput, TOutput, TOutput>
+        {
+            return Do<TActivity, TInput, TOutput, TOutput>(name, getActivityInput, activityCreationParams);
+        }
+
+        public WorkflowConfiguration<TContext> Do(string activity, string name, Func<TContext, object> getActivityInput, Action<TContext, dynamic> processOutput, Action<TContext, dynamic> processFailOutput=null) 
+        {
+            var activityNode = m_Workflow.CreateNode(name, activity, getActivityInput, processOutput,processFailOutput??((context, o) => { }) );
             if (Nodes.Count > 0)
                 Nodes.Peek().AddConstraint(name, (context, state) => state == ActivityResult.Succeeded, "Success");
             Nodes.Push(activityNode);
             return this;
         }
 
-        public WorkflowConfiguration<TContext> Do<TActivity, TInput, TOutput>(string name, Func<TContext, TInput> getActivityInput, params object[] activityCreationParams) where TActivity : IActivity<TInput, TOutput>
+        public WorkflowConfiguration<TContext> Do<TActivity, TInput, TOutput, TFailOutput>(string name, Func<TContext, TInput> getActivityInput, params object[] activityCreationParams) where TActivity : IActivity<TInput, TOutput, TFailOutput>
         {
-            return Do<TActivity, TInput, TOutput>(name, getActivityInput, (c, o) => { });
+            return Do<TActivity, TInput, TOutput, TFailOutput>(name, getActivityInput, (c, o) => { }, (c, o) => { });
         }
 
-
-        public WorkflowConfiguration<TContext> Do<TActivity, TInput, TOutput>(string name, string activityType, Func<TContext, TInput> getActivityInput,
-                                                                    Action<TContext, TOutput> processOutput, params object[] activityCreationParams) where TActivity : IActivity<TInput, TOutput>
+        public WorkflowConfiguration<TContext> Do<TActivity, TInput, TOutput, TFailOutput>(string name, string activityType, Func<TContext, TInput> getActivityInput, Action<TContext, TOutput> processOutput, Action<TContext, TFailOutput> processFailOutput, params object[] activityCreationParams) where TActivity : IActivity<TInput, TOutput, TFailOutput>
         {
-            var activityNode = m_Workflow.CreateNode<TActivity, TInput, TOutput>(name,activityType, getActivityInput, processOutput, activityCreationParams);
+            var activityNode = m_Workflow.CreateNode<TActivity, TInput, TOutput, TFailOutput>(name, activityType, getActivityInput, processOutput, processFailOutput,activityCreationParams);
             if (Nodes.Count > 0)
                 Nodes.Peek().AddConstraint(name, (context, state) => state == ActivityResult.Succeeded, "Success");
             Nodes.Push(activityNode);
             return this;
         }
 
-        public WorkflowConfiguration<TContext> Do<TActivity, TInput, TOutput>(string name, Func<TContext, TInput> getActivityInput, Action<TContext, TOutput> processOutput, params object[] activityCreationParams) where TActivity : IActivity<TInput, TOutput>
+
+        public WorkflowConfiguration<TContext> Do<TActivity, TInput, TOutput, TFailOutput>(string name, Func<TContext, TInput> getActivityInput, Action<TContext, TOutput> processOutput, Action<TContext, TFailOutput> processFailOutput, params object[] activityCreationParams) where TActivity : IActivity<TInput, TOutput, TFailOutput>
         {
-            return Do<TActivity, TInput, TOutput>(name, null, getActivityInput, processOutput, activityCreationParams);
+            return Do<TActivity, TInput, TOutput, TFailOutput>(name, null, getActivityInput, processOutput,processFailOutput, activityCreationParams);
         }
 
         public WorkflowConfiguration<TContext> ContinueWith(string node)
