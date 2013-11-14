@@ -11,7 +11,7 @@ namespace Inceptum.Workflow
     {
         public abstract ActivityResult Execute(TInput input, Action<TOutput> processOutput, Action<TFailOutput> processFailOutput);
 
-        public virtual ActivityResult Resume<TClosure>(Action<TOutput> processOutput, TClosure closure)
+        public virtual ActivityResult Resume<TClosure>(Action<TOutput> processOutput, Action<TFailOutput> processFailOutput, TClosure closure)
         {
             return ActivityResult.None;
         }

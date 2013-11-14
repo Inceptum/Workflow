@@ -40,8 +40,8 @@ namespace Inceptum.Workflow.Tests
             {
                 return ActivityResult.Pending;
             }
-
-            public override ActivityResult Resume<TClosure>(Action<List<string>> processOutput, TClosure closure)
+            
+            public override ActivityResult Resume<TClosure>(Action<List<string>> processOutput, Action<List<string>> processFailOutput, TClosure closure)
             {
                 return ActivityResult.Succeeded;
             }
@@ -94,7 +94,7 @@ namespace Inceptum.Workflow.Tests
                 return ActivityResult.Pending;
             }
 
-            public override ActivityResult Resume<TClosure>(Action<Executable> processOutput, TClosure closure)
+            public override ActivityResult Resume<TClosure>(Action<Executable> processOutput, Action<Executable> processFailOutput, TClosure closure)
             {
                 if (closure is int && (int) (object) closure > 0)
                 {

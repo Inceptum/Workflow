@@ -24,7 +24,7 @@ namespace Inceptum.Workflow
             return m_Executor.Execute(m_ActivityType, m_NodeName, input, processOutput, processFailOutput);
         }
 
-        public override ActivityResult Resume<TClosure>(Action<dynamic> processOutput, TClosure closure)
+        public override ActivityResult Resume<TClosure>(Action<dynamic> processOutput, Action<dynamic> processFailOutput, TClosure closure)
         {
             if (closure.GetType()== typeof(ActivityState))
             {
@@ -40,6 +40,7 @@ namespace Inceptum.Workflow
 
                 if (state.Status == ActivityResult.Failed)
                 {
+                    processFailOutput(state.Values);
                     return ActivityResult.Failed;
                 }
             }

@@ -75,11 +75,18 @@ namespace Inceptum.Workflow
             if (m_Resuming)
             {
                 result = activity.Resume(output =>
-                {
-                    activityOutput = output;
-                    node.ProcessOutput(m_Context, output);
-                }, m_Closure);
-             }
+                    {
+                        activityOutput = output;
+                        node.ProcessOutput(m_Context, output);
+                    },
+                                         failOutput =>
+                                             {
+                                                 activityOutput = failOutput;
+                                                 node.ProcessFailOutput(m_Context, failOutput);
+                                             },
+
+                                         m_Closure);
+            }
             else
             {
                 var activityInput = node.GetActivityInput(m_Context);
