@@ -6,7 +6,7 @@ namespace Inceptum.Workflow
     {
         ActivityResult Execute(string activityType, string nodeName, object input, Action<dynamic> processOutput, Action<dynamic> processFailOutput);
     }
-    public class GenericActivity:ActivityBase<dynamic,dynamic,dynamic>
+    public class GenericActivity:ActivityBase<object,object,object>
     {
         private readonly IActivityExecutor m_Executor;
         private readonly string m_ActivityType;

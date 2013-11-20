@@ -4,10 +4,15 @@ namespace Inceptum.Workflow
 {
 
     public abstract class ActivityBase<TInput, TOutput> : ActivityBase<TInput, TOutput, TOutput>
+        where TInput : class
+        where TOutput : class
     {
     }
 
     public abstract class ActivityBase<TInput, TOutput, TFailOutput> : IActivity<TInput, TOutput, TFailOutput>
+        where TInput : class
+        where TOutput : class
+        where TFailOutput : class
     {
         public abstract ActivityResult Execute(TInput input, Action<TOutput> processOutput, Action<TFailOutput> processFailOutput);
 

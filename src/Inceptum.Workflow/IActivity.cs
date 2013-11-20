@@ -2,9 +2,14 @@ using System;
 
 namespace Inceptum.Workflow
 {
-    public interface IActivity<in TInput, out TOutput, out TFailOutput>
+    public interface IActivityWithOutput<out TInput, out TOutput, out TFailOutput> where TInput:class where TOutput:class where TFailOutput:class
+    {
+        ActivityResult Resume<TClosure>(Action<TOutput> processOutput, Action<TFailOutput> processFailOutput, TClosure closure);
+    }
+
+    public interface IActivity<TInput, out TOutput, out TFailOutput> : IActivityWithOutput<TInput, TOutput, TFailOutput>
+        where TInput : class where TOutput : class where TFailOutput : class
     {
         ActivityResult Execute(TInput input, Action<TOutput> processOutput, Action<TFailOutput> processFailOutput);
-        ActivityResult Resume<TClosure>(Action<TOutput> processOutput, Action<TFailOutput> processFailOutput, TClosure closure);
     }
 }

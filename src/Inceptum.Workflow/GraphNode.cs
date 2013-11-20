@@ -23,6 +23,9 @@ namespace Inceptum.Workflow
 
 
     internal class GraphNode<TContext, TActivity, TInput, TOutput, TFailOutput> : IGraphNode<TContext> where TActivity : IActivity<TInput, TOutput, TFailOutput>
+        where TInput : class
+        where TOutput : class
+        where TFailOutput : class
     {
         private readonly Func<TContext, TInput> m_GetActivityInput;
         private readonly Action<TContext, TOutput> m_ProcessOutput;

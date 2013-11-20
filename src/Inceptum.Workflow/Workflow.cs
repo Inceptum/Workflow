@@ -117,6 +117,9 @@ namespace Inceptum.Workflow
 
         internal IGraphNode<TContext> CreateNode<TActivity, TInput, TOutput, TFailOutput>(string name, string activityType, Func<TContext, TInput> getActivityInput, Action<TContext, TOutput> processOutput, Action<TContext, TFailOutput> processFailOutput, object[] activityCreationParams, params string[] aliases)
             where TActivity : IActivity<TInput, TOutput, TFailOutput>
+            where TInput : class
+            where TOutput : class
+            where TFailOutput : class
         {
             var node = new GraphNode<TContext, TActivity, TInput, TOutput, TFailOutput>(name, activityType, getActivityInput, processOutput, processFailOutput, activityCreationParams);
             registerNode(node, aliases);

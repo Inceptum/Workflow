@@ -61,7 +61,11 @@ namespace Inceptum.Workflow
 
 
 
-        public WorkflowState Visit<TActivity, TInput, TOutput, TFailOutput>(GraphNode<TContext, TActivity, TInput, TOutput, TFailOutput> node) where TActivity : IActivity<TInput, TOutput, TFailOutput>
+        public WorkflowState Visit<TActivity, TInput, TOutput, TFailOutput>(GraphNode<TContext, TActivity, TInput, TOutput, TFailOutput> node)
+            where TActivity : IActivity<TInput, TOutput, TFailOutput>
+            where TInput : class
+            where TOutput : class
+            where TFailOutput : class
         {
             TActivity activity;
             if (typeof (TActivity) == typeof (GenericActivity))
