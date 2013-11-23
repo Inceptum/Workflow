@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using NUnit.Framework;
 
 namespace Inceptum.Workflow.Tests
@@ -56,7 +57,7 @@ namespace Inceptum.Workflow.Tests
             where TOutput : class
             where TFailOutput : class
         {
-            GraphNode<string, ActivityBase<TInput, TOutput, TFailOutput>, TInput, TOutput, TFailOutput> node = null;
+            GraphNode<string> node = null;
         }
 
 
@@ -70,6 +71,9 @@ namespace Inceptum.Workflow.Tests
         {
             IActivityWithOutput<object, object, object> a = new MyActivity();
             Node<MyActivity>("node name").ProcessOutput(i => { }).ProcessFailOutput(e => { }).GetInput(o => new InvalidCastException());
+
+
+            var activitySlot = new Node<string>().Activity<MyActivity>().WithInput(s => new InvalidCastException());//.Create<MyActivity>(new object[0]);
         }
 
     }
@@ -83,6 +87,30 @@ namespace Inceptum.Workflow.Tests
  
     }
 
+
+
+    class Node<TContext> : IGraphNode<TContext>
+    {
+        public string Name { get; private set; }
+        public string ActivityType { get; private set; }
+        public IEnumerable<GraphEdge<TContext>> Edges { get; private set; }
+        public T Accept<T>(IWorkflowVisitor<TContext, T> workflowExecutor)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void AddConstraint(string node, Func<TContext, ActivityResult, bool> condition, string description)
+        {
+            throw new NotImplementedException();
+        }
+
+        public ISlotCreationHelper<TContext,TActivity> Activity<TActivity>() where TActivity : IActivityWithOutput<object, object, object>
+        {
+            return new SlotCreationHelper<TContext, TActivity>(null);
+        }
+
+        public IActivitySlot<TContext> ActivitySlot { get; private set; }
+    }
    
 
 }

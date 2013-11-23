@@ -7,11 +7,7 @@ namespace Inceptum.Workflow
 
     internal interface IWorkflowVisitor<TContext,  out TResult>
     {
-        TResult Visit<TActivity, TInput, TOutput, TFailOutput>(GraphNode<TContext, TActivity, TInput, TOutput, TFailOutput> node)
-            where TActivity : IActivity<TInput, TOutput, TFailOutput>
-            where TInput : class
-            where TOutput : class
-            where TFailOutput : class;
+        TResult Visit(IGraphNode<TContext> node);
     }
 
     internal interface IGraphNode<TContext>
@@ -21,5 +17,10 @@ namespace Inceptum.Workflow
         IEnumerable<GraphEdge<TContext>> Edges { get; }
         T Accept<T>(IWorkflowVisitor<TContext, T> workflowExecutor);
         void AddConstraint(string node, Func<TContext, ActivityResult, bool> condition, string description);
+        ISlotCreationHelper<TContext, TActivity> Activity<TActivity>() where TActivity : IActivityWithOutput<object, object, object>;
+        IActivitySlot<TContext> ActivitySlot
+        {
+            get;
+        }
     }
 }

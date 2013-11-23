@@ -3,53 +3,115 @@ using System.Collections.Generic;
 
 namespace Inceptum.Workflow
 {
-    class ExecutionState<TContext>
+    
+
+
+    interface IActivitySlot<TContext>
     {
-        public TContext Context { get; set; }
-        public ActivityResult State { get; set; }
+        ActivityResult Execute(IActivityFactory factory, TContext context, out object activityInput, out object activityOutput);
+        ActivityResult Resume<TClosure>(IActivityFactory factory, TContext context, TClosure closure, out object activityOutput);
     }
 
-  
+    internal class ActivitySlot<TContext, TInput, TOutput, TFailOutput> : IActivitySlot<TContext> 
+        where TInput : class
+        where TOutput : class
+        where TFailOutput : class
+    {
+        private readonly Func<TContext, TInput> m_GetActivityInput;
+        private Action<TContext, TOutput> m_ProcessOutput= (context, output) => { };
+        private Action<TContext, TFailOutput> m_ProcessFailOutput= (context, output) => { };
+        private Func<IActivityFactory,IActivity<TInput, TOutput, TFailOutput>> m_ActivityCreation;
 
+        public ActivitySlot(Func<IActivityFactory, IActivity<TInput, TOutput, TFailOutput>> activityCreation, Func<TContext, TInput> getInput)
+        {
+            m_ActivityCreation = activityCreation;
+            m_GetActivityInput = getInput;
+        }
 
+        public  ActivitySlot<TContext, TInput, TOutput, TFailOutput> ProcessOutput( Action<TContext, TOutput> processOutput)
+        {
+            m_ProcessOutput = processOutput;
+            return this;
+        }
+        public  ActivitySlot<TContext, TInput, TOutput, TFailOutput> ProcessFailOutput( Action<TContext, TFailOutput> processFailOutput)
+        {
+            m_ProcessFailOutput = processFailOutput;
+            return this;
+        }
+
+        public ActivityResult Execute(IActivityFactory factory, TContext context, out object activityInput, out object activityOutput)
+        {
+            var activity = m_ActivityCreation(factory);
+            object actout=null;
+            var actInput = m_GetActivityInput(context);
+            activityInput = actInput;
+
+            var result = activity.Execute(actInput, output =>
+            {
+                actout = output;
+                m_ProcessOutput(context, output);
+            }, output =>
+            {
+                actout = output;
+                m_ProcessFailOutput(context, output);
+            });
+            activityOutput = actout;
+            return result;
+        }
+
+        public ActivityResult Resume<TClosure>(IActivityFactory factory, TContext context, TClosure closure, out object activityOutput)
+        {
+            var activity = m_ActivityCreation(factory);
+            object actout = null;
+            var result = activity.Resume(output =>
+            {
+                actout = output;
+                m_ProcessOutput(context, output);
+            }, output =>
+            {
+                actout = output;
+                m_ProcessFailOutput(context, output);
+            },
+            closure);
+            activityOutput = actout;
+            return result;
+        
+        }
+    }
+
+/*
     internal class GraphNode<TContext> : GraphNode<TContext,GenericActivity, dynamic, dynamic,dynamic>
     {
         public GraphNode(string name, string activityType, Func<TContext, dynamic> getActivityInput, Action<TContext, dynamic> processOutput, Action<TContext, dynamic> processFailOutput, params object[] activityCreationParams)
             : base(name, activityType, getActivityInput, processOutput,processFailOutput, activityCreationParams)
         {
         }
-    }
+    }*/
 
 
 
-    internal class GraphNode<TContext, TActivity, TInput, TOutput, TFailOutput> : IGraphNode<TContext> where TActivity : IActivity<TInput, TOutput, TFailOutput>
-        where TInput : class
-        where TOutput : class
-        where TFailOutput : class
+    internal class GraphNode<TContext> : IGraphNode<TContext>
     {
-        private readonly Func<TContext, TInput> m_GetActivityInput;
-        private readonly Action<TContext, TOutput> m_ProcessOutput;
+        private IActivitySlot<TContext> m_ActivitySlot;
+        private readonly List<GraphEdge<TContext>> m_Constraints = new List<GraphEdge<TContext>>();
 
         public string Name { get; private set; }
         public string ActivityType { get; private set; }
-        public object[] ActivityCreationParams { get; set; }
 
-
-        public GraphNode(string name, Func<TContext, TInput> getActivityInput, Action<TContext, TOutput> processOutput, Action<TContext, TFailOutput> processFailOutput, params object[] activityCreationParams)
-            : this(name, null, getActivityInput, processOutput,processFailOutput, activityCreationParams)
+        public IActivitySlot<TContext> ActivitySlot
         {
+            get { return m_ActivitySlot; }
         }
+ 
 
-        public GraphNode(string name, string activityType, Func<TContext, TInput> getActivityInput, Action<TContext, TOutput> processOutput, Action<TContext, TFailOutput> processFailOutput,params object[] activityCreationParams)
-
+ 
+        public GraphNode(string name)
         {
-            m_ProcessFailOutput = processFailOutput;
-            ActivityCreationParams = activityCreationParams;
+/*            var activitySlot = new ActivitySlot<TContext, TInput, TOutput, TFailOutput>(factory => factory.Create<TActivity>(activityCreationParams),getActivityInput);
+            activitySlot.ProcessOutput(processOutput).ProcessFailOutput(processFailOutput);
+            m_ActivitySlot = activitySlot;*/
             Name = name;
-            ActivityType = activityType ?? typeof(TActivity).Name;
-            m_ProcessOutput = processOutput;
-            if (getActivityInput == null) throw new ArgumentNullException("getActivityInput");
-            m_GetActivityInput = getActivityInput;
+//            ActivityType = activityType ?? typeof(TActivity).Name;
         }
 
         public T Accept<T>(IWorkflowVisitor<TContext, T> workflowExecutor)
@@ -57,34 +119,72 @@ namespace Inceptum.Workflow
             return workflowExecutor.Visit(this);
         }
   
- 
-        public TInput GetActivityInput(TContext context)
-        {
-            return m_GetActivityInput(context);
-        }
-
-        public void ProcessOutput(TContext context, TOutput output)
-        {
-            m_ProcessOutput(context, output);
-        }
-
   
-        public void ProcessFailOutput(TContext context, TFailOutput output)
-        {
-            m_ProcessFailOutput(context, output);
-        }
 
-        private readonly List<GraphEdge<TContext>> m_Constraints = new List<GraphEdge<TContext>>();
-        private Action<TContext, TFailOutput> m_ProcessFailOutput;
 
         public virtual void AddConstraint(string node, Func<TContext, ActivityResult, bool> condition, string description)
         {
             m_Constraints.Add(new GraphEdge<TContext>(node, condition, description));
         }
 
+        public ISlotCreationHelper<TContext, TActivity> Activity<TActivity>() where TActivity : IActivityWithOutput<object, object, object>
+        {
+            return new SlotCreationHelper<TContext, TActivity>(this);
+        }
+
         public IEnumerable<GraphEdge<TContext>> Edges
         {
             get { return m_Constraints; }
+        }
+
+        public void AddActivitySlot(IActivitySlot<TContext> activitySlot)
+        {
+            m_ActivitySlot = activitySlot;
+        }
+    }
+
+
+    public interface ISlotCreationHelper<TContext, out TActivity>
+    {
+        TActivity CreateActivity(IActivityFactory activityFactory);
+    }
+
+    interface ISlotCreationHelperWithNode<TContext>
+    {
+        GraphNode<TContext> GraphNode{get;}
+    }
+
+    internal class SlotCreationHelper<TContext, TActivity> :ISlotCreationHelper<TContext,  TActivity>, ISlotCreationHelperWithNode<TContext>
+        where TActivity : IActivityWithOutput<object, object, object>
+    {
+
+        public SlotCreationHelper(GraphNode<TContext> graphNode)
+        {
+            GraphNode = graphNode;
+        }
+
+        public GraphNode<TContext> GraphNode
+        {
+            get; private set;
+        }
+
+        public TActivity CreateActivity(IActivityFactory activityFactory)
+        {
+           return activityFactory.Create<TActivity>();
+        }
+    }
+     
+    static class SlotCreationHelperExtensions
+    {
+
+        public static ActivitySlot<TContext, TInput, TOutput, TFailOutput> WithInput<TContext, TInput, TOutput, TFailOutput>(this ISlotCreationHelper<TContext, IActivity<TInput, TOutput, TFailOutput>> n, Func<TContext, TInput> getInput)
+            where TInput : class
+            where TOutput : class
+            where TFailOutput : class
+        {
+            var activitySlot = new ActivitySlot<TContext, TInput, TOutput, TFailOutput>(n.CreateActivity, getInput);
+            (n as ISlotCreationHelperWithNode<TContext>).GraphNode.AddActivitySlot(activitySlot);
+            return activitySlot;
         }
 
     }

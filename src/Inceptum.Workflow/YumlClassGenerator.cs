@@ -14,17 +14,7 @@ namespace Inceptum.Workflow
             m_Nodes = nodes;
         }
 
-
-        public string Visit<TActivity, TInput, TOutput, TFailOutput>(GraphNode<TContext, TActivity, TInput, TOutput, TFailOutput> node)
-            where TActivity : IActivity<TInput, TOutput, TFailOutput>
-            where TInput : class
-            where TOutput : class
-            where TFailOutput : class
-        {
-            return Visit(node as GraphNode<TContext>);
-        }
-
-        public string Visit(GraphNode<TContext> node)
+        public string Visit(IGraphNode<TContext> node)
         {
             m_Visited.Add(node);
             string res = "";
@@ -54,15 +44,7 @@ namespace Inceptum.Workflow
             m_Nodes = nodes;
         }
 
-
-        public string Visit<TActivity, TInput, TOutput, TFailOutput>(GraphNode<TContext, TActivity, TInput, TOutput, TFailOutput> node)
-            where TActivity : IActivity<TInput, TOutput, TFailOutput>
-            where TInput : class
-            where TOutput : class
-            where TFailOutput : class
-        {
-            return Visit(node as IGraphNode<TContext>);
-        }
+ 
 
         public string Visit(IGraphNode<TContext> node)
         {

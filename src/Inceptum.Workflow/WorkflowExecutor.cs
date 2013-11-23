@@ -58,55 +58,28 @@ namespace Inceptum.Workflow
             m_ActivityExecutor=activityExecutor;
         }
 
-
-
-
-        public WorkflowState Visit<TActivity, TInput, TOutput, TFailOutput>(GraphNode<TContext, TActivity, TInput, TOutput, TFailOutput> node)
-            where TActivity : IActivity<TInput, TOutput, TFailOutput>
-            where TInput : class
-            where TOutput : class
-            where TFailOutput : class
+        public WorkflowState Visit(IGraphNode<TContext> node)
         {
-            TActivity activity;
-            if (typeof (TActivity) == typeof (GenericActivity))
-                activity = (TActivity)(object)new GenericActivity(m_ActivityExecutor, node.ActivityType, node.Name);
-            else
-                activity = m_Factory.Create<TActivity, TInput, TOutput, TFailOutput>(node.ActivityCreationParams);
-
-            object activityOutput = null;
+            object activityOutput=null;
             ActivityResult result;
             m_Execution.ActiveNode = node.Name;
-            if (m_Resuming)
-            {
-                result = activity.Resume(output =>
-                    {
-                        activityOutput = output;
-                        node.ProcessOutput(m_Context, output);
-                    },
-                                         failOutput =>
-                                             {
-                                                 activityOutput = failOutput;
-                                                 node.ProcessFailOutput(m_Context, failOutput);
-                                             },
 
-                                         m_Closure);
-            }
+            if (node.ActivitySlot == null)
+                result = ActivityResult.Succeeded;
             else
             {
-                var activityInput = node.GetActivityInput(m_Context);
+                if (m_Resuming)
+                {
+                    result = node.ActivitySlot.Resume(m_Factory, m_Context, m_Closure, out activityOutput);
 
-                m_ExecutionObserver.ActivityStarted(node.Name, node.ActivityType, activityInput);
-                result = activity.Execute(activityInput, output =>
-                    {
-                        activityOutput = output;
-                        node.ProcessOutput(m_Context, output);
-                    }, failOutput =>
-                    {
-                        activityOutput = failOutput;
-                        node.ProcessFailOutput(m_Context, failOutput);
-                    });
+                }
+                else
+                {
+                    object activityInput;
+                    result = node.ActivitySlot.Execute(m_Factory, m_Context, out activityInput, out activityOutput);
+                    m_ExecutionObserver.ActivityStarted(node.Name, node.ActivityType, activityInput);
+                }
             }
-
             m_Resuming = false;
 
             if (result == ActivityResult.Pending)

@@ -5,7 +5,7 @@ using System.Reflection;
 
 namespace Inceptum.Workflow.Fluent
 {
-    public static class ExecutionFlowExtensions 
+   /* public static class ExecutionFlowExtensions 
     {
         public static WorkflowConfiguration<TContext> Do<TOutput, TContext>(this IExecutionFlow<TContext> flow, string name,
            Expression<Func<TContext, TOutput>> method) where TOutput : class
@@ -31,11 +31,11 @@ namespace Inceptum.Workflow.Fluent
 
 
 
-    }
+    }*/
 
     public interface IExecutionFlow<TContext>: IHideObjectMembers
     {
-        WorkflowConfiguration<TContext> Do<TActivity, TInput, TOutput, TFailOutput>(string name, string activityType, Func<TContext, TInput> getActivityInput, Action<TContext, TOutput> processOutput, Action<TContext, TFailOutput> processFailOutput, params object[] activityCreationParams)
+/*        WorkflowConfiguration<TContext> Do<TActivity, TInput, TOutput, TFailOutput>(string name, string activityType, Func<TContext, TInput> getActivityInput, Action<TContext, TOutput> processOutput, Action<TContext, TFailOutput> processFailOutput, params object[] activityCreationParams)
             where TActivity : IActivity<TInput, TOutput, TFailOutput>
             where TInput : class
             where TOutput : class
@@ -63,7 +63,9 @@ namespace Inceptum.Workflow.Fluent
         WorkflowConfiguration<TContext> Do<TActivity, TInput, TOutput>(string name, Func<TContext, TInput> getActivityInput, params object[] activityCreationParams)
             where TActivity : IActivity<TInput, TOutput, TOutput>
             where TInput : class
-            where TOutput : class;
+            where TOutput : class;*/
+
+        WorkflowConfiguration<TContext> Do(string name);
     }
 
     public interface IBranchingPoint<TContext>: IHideObjectMembers
@@ -116,7 +118,7 @@ namespace Inceptum.Workflow.Fluent
             get { return m_Nodes; }
         }
 
-
+/*
         public WorkflowConfiguration<TContext> Do<TActivity, TInput, TOutput>(string name, string activityType, Func<TContext, TInput> getActivityInput, Action<TContext, TOutput> processOutput, Action<TContext, TOutput> processFailOutput=null,
             params object[] activityCreationParams)
             where TActivity : IActivity<TInput, TOutput, TOutput>
@@ -175,16 +177,26 @@ namespace Inceptum.Workflow.Fluent
             Nodes.Push(activityNode);
             return this;
         }
+*/
 
+        public WorkflowConfiguration<TContext> Do(string name)
+        {
 
-        public WorkflowConfiguration<TContext> Do<TActivity, TInput, TOutput, TFailOutput>(string name, Func<TContext, TInput> getActivityInput, Action<TContext, TOutput> processOutput, Action<TContext, TFailOutput> processFailOutput, params object[] activityCreationParams)
+            var activityNode = m_Workflow.CreateNode(name);
+            if (Nodes.Count > 0)
+                Nodes.Peek().AddConstraint(name, (context, state) => state == ActivityResult.Succeeded, "Success");
+            Nodes.Push(activityNode);
+            return this;
+        }
+
+      /*  public WorkflowConfiguration<TContext> Do<TActivity, TInput, TOutput, TFailOutput>(string name, Func<TContext, TInput> getActivityInput, Action<TContext, TOutput> processOutput, Action<TContext, TFailOutput> processFailOutput, params object[] activityCreationParams)
             where TActivity : IActivity<TInput, TOutput, TFailOutput>
             where TInput : class
             where TOutput : class
             where TFailOutput : class
         {
             return Do<TActivity, TInput, TOutput, TFailOutput>(name, null, getActivityInput, processOutput,processFailOutput, activityCreationParams);
-        }
+        }*/
 
         public WorkflowConfiguration<TContext> ContinueWith(string node)
         {
