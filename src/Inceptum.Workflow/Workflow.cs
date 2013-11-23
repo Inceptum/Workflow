@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
+using System.Linq.Expressions;
 using Inceptum.Workflow.Fluent;
 
 namespace Inceptum.Workflow
@@ -171,16 +172,53 @@ graph [ resolution=64];
 
 {0}
 }}", accept(generator));
-/*
-            var yuml = new YumlActivityGenerator<TContext>(this);
-            return "paste the following to http://yuml.me/diagram/nofunky/activity/draw\n" + accept(yuml);
-*/
-            // HttpUtility.UrlEncode(m_Graph.ToString());
+ 
         }
 
         public ISlotCreationHelper<TContext, TActivity> Node<TActivity>(string name) where TActivity : IActivityWithOutput<object, object, object>
         {
-            return Nodes[name].Activity<TActivity>();
+            return Nodes[name].Activity<TActivity>(typeof(TActivity).Name);
+        }
+ 
+        public ISlotCreationHelper<TContext, DelegateActivity<TInput, TOutput>> Node<TInput, TOutput>(string name, Expression<Func<TInput, TOutput>> method) 
+            where TInput : class where TOutput : class
+        
+        {
+            var methodCall = method.Body as MethodCallExpression;
+            string activityType = null;
+
+            if (methodCall != null)
+            {
+                activityType = methodCall.Method.Name;
+            }
+            var activityMethod = method.Compile();
+            return Nodes[name].Activity<DelegateActivity<TInput, TOutput>>(activityType, activityMethod);
+        }
+    }
+
+    public class DelegateActivity<TInput, TOutput> :ActivityBase<TInput, TOutput,Exception> where TInput : class where TOutput : class
+    {
+        private readonly Func<TInput, TOutput> m_ActivityMethod;
+
+        public DelegateActivity(Func<TInput, TOutput> activityMethod)
+        {
+            m_ActivityMethod = activityMethod;
+        }
+
+        public override ActivityResult Execute(TInput input, Action<TOutput> processOutput, Action<Exception> processFailOutput)
+        {
+            try
+            {
+                var output = m_ActivityMethod(input);
+                processOutput(output);
+                return ActivityResult.Succeeded;
+            }
+            catch (Exception e)
+            {
+                processFailOutput(e);
+                return ActivityResult.Failed;
+            }
+
         }
     }
 }

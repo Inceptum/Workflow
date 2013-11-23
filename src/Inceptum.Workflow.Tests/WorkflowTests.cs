@@ -291,7 +291,7 @@ namespace Inceptum.Workflow.Tests
             Assert.That(wfContext, Is.EquivalentTo(new[] {"TestActivity1", "AsyncTestActivity", "TestActivity2"}), "Wrong activities were executed");
 
         }
-/* 
+/*
         [Test]
         public void GenericActivityTest()
         {
@@ -318,25 +318,30 @@ namespace Inceptum.Workflow.Tests
             Assert.That(executor.Input.Count, Is.EqualTo(2), "Executor was called with wrong data");
 
         }
- 
+ */
         [Test]
         public void DelegateActivityTest()
         {
             var executor = new FakeExecutor();
             var wf = new Workflow<JObject>("", new InMemoryPersister<JObject>(), activityExecutor: executor);
-            wf.Configure(cfg => cfg.Do("node",c=>activityMethod(c)).End());
-            var wfContext=new JObject();
+            wf.Configure(cfg => cfg.Do("node").End());
+            wf.Node<string, string>("node", x=>activityMethod(x))
+                .WithInput(context => (string)(((dynamic)context).Input))
+                .ProcessOutput((context, output) => ((dynamic)context).Output=output);
+
+
+            var wfContext = JObject.FromObject(new {Input="test"});
+
             wf.Run(wfContext);
             dynamic o = wfContext;
+            Assert.That(((string)(o.Output)), Is.EqualTo("test!!!"), "delegate was not executed");
             Assert.That(wf.Nodes["node"].ActivityType, Is.EqualTo("activityMethod"),"Wrong activity type");
-            Assert.That(((string)(o.Value)), Is.EqualTo("!!!"), "delegate was not executed");
         }
-  */ 
 
-        public string activityMethod(JObject context)
+
+        public string activityMethod(string input)
         {
-            dynamic jObject = context;
-            return jObject.Value="!!!";
+            return input+"!!!";
         }
     }
 

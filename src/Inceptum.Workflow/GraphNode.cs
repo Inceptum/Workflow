@@ -8,11 +8,18 @@ namespace Inceptum.Workflow
 
     interface IActivitySlot<TContext>
     {
+        string ActivityType { get; }
         ActivityResult Execute(IActivityFactory factory, TContext context, out object activityInput, out object activityOutput);
         ActivityResult Resume<TClosure>(IActivityFactory factory, TContext context, TClosure closure, out object activityOutput);
     }
 
-    internal class ActivitySlot<TContext, TInput, TOutput, TFailOutput> : IActivitySlot<TContext> 
+    public interface IActivitySlot<TContext, TInput, TOutput, TFailOutput> : IHideObjectMembers
+    {
+        IActivitySlot<TContext, TInput, TOutput, TFailOutput> ProcessOutput(Action<TContext, TOutput> processOutput);
+        IActivitySlot<TContext, TInput, TOutput, TFailOutput> ProcessFailOutput(Action<TContext, TFailOutput> processFailOutput);
+    }
+
+    internal class ActivitySlot<TContext, TInput, TOutput, TFailOutput> : IActivitySlot<TContext>, IActivitySlot<TContext, TInput, TOutput, TFailOutput>
         where TInput : class
         where TOutput : class
         where TFailOutput : class
@@ -22,21 +29,27 @@ namespace Inceptum.Workflow
         private Action<TContext, TFailOutput> m_ProcessFailOutput= (context, output) => { };
         private Func<IActivityFactory,IActivity<TInput, TOutput, TFailOutput>> m_ActivityCreation;
 
-        public ActivitySlot(Func<IActivityFactory, IActivity<TInput, TOutput, TFailOutput>> activityCreation, Func<TContext, TInput> getInput)
+        public ActivitySlot(Func<IActivityFactory, IActivity<TInput, TOutput, TFailOutput>> activityCreation, Func<TContext, TInput> getInput,string activityType)
         {
             m_ActivityCreation = activityCreation;
             m_GetActivityInput = getInput;
+            ActivityType = activityType;
         }
 
-        public  ActivitySlot<TContext, TInput, TOutput, TFailOutput> ProcessOutput( Action<TContext, TOutput> processOutput)
+        public  IActivitySlot<TContext, TInput, TOutput, TFailOutput> ProcessOutput( Action<TContext, TOutput> processOutput)
         {
             m_ProcessOutput = processOutput;
             return this;
         }
-        public  ActivitySlot<TContext, TInput, TOutput, TFailOutput> ProcessFailOutput( Action<TContext, TFailOutput> processFailOutput)
+        public  IActivitySlot<TContext, TInput, TOutput, TFailOutput> ProcessFailOutput( Action<TContext, TFailOutput> processFailOutput)
         {
             m_ProcessFailOutput = processFailOutput;
             return this;
+        }
+
+        public string ActivityType
+        {
+            get; private set;
         }
 
         public ActivityResult Execute(IActivityFactory factory, TContext context, out object activityInput, out object activityOutput)
@@ -96,7 +109,14 @@ namespace Inceptum.Workflow
         private readonly List<GraphEdge<TContext>> m_Constraints = new List<GraphEdge<TContext>>();
 
         public string Name { get; private set; }
-        public string ActivityType { get; private set; }
+
+        public string ActivityType
+        {
+            get
+            {
+                return ActivitySlot != null ? ActivitySlot.ActivityType : "";
+            }
+        }
 
         public IActivitySlot<TContext> ActivitySlot
         {
@@ -127,9 +147,9 @@ namespace Inceptum.Workflow
             m_Constraints.Add(new GraphEdge<TContext>(node, condition, description));
         }
 
-        public ISlotCreationHelper<TContext, TActivity> Activity<TActivity>() where TActivity : IActivityWithOutput<object, object, object>
+        public ISlotCreationHelper<TContext, TActivity> Activity<TActivity>(string activityType,params object[] activityCreationParams) where TActivity : IActivityWithOutput<object, object, object>
         {
-            return new SlotCreationHelper<TContext, TActivity>(this);
+            return new SlotCreationHelper<TContext, TActivity>(this, activityType, activityCreationParams);
         }
 
         public IEnumerable<GraphEdge<TContext>> Edges
@@ -144,22 +164,29 @@ namespace Inceptum.Workflow
     }
 
 
-    public interface ISlotCreationHelper<TContext, out TActivity>
+    public interface ISlotCreationHelper<TContext, out TActivity> : IHideObjectMembers
     {
-        TActivity CreateActivity(IActivityFactory activityFactory);
+       
+       
     }
 
     interface ISlotCreationHelperWithNode<TContext>
     {
         GraphNode<TContext> GraphNode{get;}
+        string ActivityType { get; }
+        IActivity<TInput, TOutput, TFailOutput> CreateActivity<TInput, TOutput, TFailOutput>(IActivityFactory activityFactory) where TInput : class where TOutput : class where TFailOutput : class;
     }
 
     internal class SlotCreationHelper<TContext, TActivity> :ISlotCreationHelper<TContext,  TActivity>, ISlotCreationHelperWithNode<TContext>
         where TActivity : IActivityWithOutput<object, object, object>
     {
+        private readonly object[] m_ActivityCreationParams;
+        private readonly string m_ActivityType;
 
-        public SlotCreationHelper(GraphNode<TContext> graphNode)
+        public SlotCreationHelper(GraphNode<TContext> graphNode, string activityType, object[] activityCreationParams)
         {
+            m_ActivityType = activityType;
+            m_ActivityCreationParams = activityCreationParams;
             GraphNode = graphNode;
         }
 
@@ -168,22 +195,32 @@ namespace Inceptum.Workflow
             get; private set;
         }
 
-        public TActivity CreateActivity(IActivityFactory activityFactory)
+
+        public IActivity<TInput, TOutput, TFailOutput> CreateActivity<TInput, TOutput, TFailOutput>(IActivityFactory activityFactory) where TInput : class where TOutput : class where TFailOutput : class
         {
-           return activityFactory.Create<TActivity>();
+            return (IActivity<TInput, TOutput, TFailOutput>) activityFactory.Create<TActivity>(m_ActivityCreationParams);
+        }
+
+        public string ActivityType
+        {
+            get
+            {
+                return m_ActivityType;
+            }
         }
     }
      
-    static class SlotCreationHelperExtensions
+    public static class SlotCreationHelperExtensions
     {
 
-        public static ActivitySlot<TContext, TInput, TOutput, TFailOutput> WithInput<TContext, TInput, TOutput, TFailOutput>(this ISlotCreationHelper<TContext, IActivity<TInput, TOutput, TFailOutput>> n, Func<TContext, TInput> getInput)
+        public static IActivitySlot<TContext, TInput, TOutput, TFailOutput> WithInput<TContext, TInput, TOutput, TFailOutput>(this ISlotCreationHelper<TContext, IActivity<TInput, TOutput, TFailOutput>> n, Func<TContext, TInput> getInput)
             where TInput : class
             where TOutput : class
             where TFailOutput : class
         {
-            var activitySlot = new ActivitySlot<TContext, TInput, TOutput, TFailOutput>(n.CreateActivity, getInput);
-            (n as ISlotCreationHelperWithNode<TContext>).GraphNode.AddActivitySlot(activitySlot);
+            var helper = (n as ISlotCreationHelperWithNode<TContext>);
+            var activitySlot = new ActivitySlot<TContext, TInput, TOutput, TFailOutput>(activityFactory => helper.CreateActivity<TInput, TOutput, TFailOutput>(activityFactory), getInput, helper.ActivityType);
+            helper.GraphNode.AddActivitySlot(activitySlot);
             return activitySlot;
         }
 

@@ -5,8 +5,8 @@ using System.Reflection;
 
 namespace Inceptum.Workflow.Fluent
 {
-   /* public static class ExecutionFlowExtensions 
-    {
+    public static class ExecutionFlowExtensions 
+    {/*
         public static WorkflowConfiguration<TContext> Do<TOutput, TContext>(this IExecutionFlow<TContext> flow, string name,
            Expression<Func<TContext, TOutput>> method) where TOutput : class
         {
@@ -20,7 +20,8 @@ namespace Inceptum.Workflow.Fluent
             var activityMethod = method.Compile();
             return flow.Do<DelegateActivity<TOutput>, Func<TOutput>, TOutput,Exception>(name, activityType, context => (() => activityMethod(context)), ((context, output) => { }) ,((context, output) => { }));
         }
-
+*/
+/*
 
         public static WorkflowConfiguration<TContext> Do<TContext>(this IExecutionFlow<TContext> flow, string activity, Func<TContext, object> getActivityInput,
             Action<TContext, dynamic> processOutput=null,
@@ -29,9 +30,10 @@ namespace Inceptum.Workflow.Fluent
             return flow.Do(activity, activity, getActivityInput, processOutput ?? ((context, o) => { }), processFailOutput ?? ((context, o) => { }));
         }
 
+*/
 
 
-    }*/
+    }
 
     public interface IExecutionFlow<TContext>: IHideObjectMembers
     {
