@@ -13,7 +13,7 @@ namespace Inceptum.Workflow
         IGraphNode<TContext> this[string name] { get; }
     }
 
-    public class Workflow<TContext> : IActivityFactory , INodesResolver<TContext>, IActivityExecutor 
+    public class Workflow<TContext> : IActivityFactory , INodesResolver<TContext> 
     {
         private readonly IGraphNode<TContext> m_End;
         private readonly IGraphNode<TContext> m_Fail;
@@ -21,13 +21,11 @@ namespace Inceptum.Workflow
         private readonly IGraphNode<TContext> m_Start;
         private readonly IWorkflowPersister<TContext> m_Persister;
         private readonly IActivityFactory  m_ActivityFactory;
-        private readonly IActivityExecutor m_ActivityExecutor;
         private readonly IExecutionObserver m_ExecutionObserver;
 
-        public Workflow(string name, IWorkflowPersister<TContext> persister, IActivityFactory  activityFactory = null,IActivityExecutor  activityExecutor=null,IExecutionObserver executionObserver=null )
+        public Workflow(string name, IWorkflowPersister<TContext> persister, IActivityFactory  activityFactory = null,IExecutionObserver executionObserver=null )
         {
             m_ExecutionObserver = executionObserver;
-            m_ActivityExecutor = activityExecutor??this;
             m_ActivityFactory = activityFactory ?? this;
             m_Persister = persister;
             Name = name;
@@ -110,7 +108,7 @@ namespace Inceptum.Workflow
         public virtual Execution<TContext> Run(TContext context)
         {
             var execution = new Execution<TContext> { State = WorkflowState.InProgress };
-            var executor = new WorkflowExecutor<TContext>(execution, context, this, m_ActivityFactory, m_ActivityExecutor, m_ExecutionObserver);
+            var executor = new WorkflowExecutor<TContext>(execution, context, this, m_ActivityFactory,  m_ExecutionObserver);
             accept(executor);
             m_Persister.Save(context, execution);
             return execution;
@@ -120,7 +118,7 @@ namespace Inceptum.Workflow
         public virtual Execution<TContext> Resume<TClosure>(TContext context, TClosure closure)
         {
             var execution = m_Persister.Load(context);
-            var executor = new WorkflowExecutor<TContext>(execution, context, this, m_ActivityFactory, m_ActivityExecutor, m_ExecutionObserver, closure);
+            var executor = new WorkflowExecutor<TContext>(execution, context, this, m_ActivityFactory,  m_ExecutionObserver, closure);
             string node = execution.ActiveNode;
             accept(executor, node);
             m_Persister.Save(context, execution);
@@ -130,7 +128,7 @@ namespace Inceptum.Workflow
         public virtual Execution<TContext> ResumeFrom(TContext context, string node)
         {
             var execution = m_Persister.Load(context);
-            var executor = new WorkflowExecutor<TContext>(execution, context, this, m_ActivityFactory, m_ActivityExecutor, m_ExecutionObserver);
+            var executor = new WorkflowExecutor<TContext>(execution, context, this, m_ActivityFactory,  m_ExecutionObserver);
             accept(executor, node);
             m_Persister.Save(context, execution);
             return execution;

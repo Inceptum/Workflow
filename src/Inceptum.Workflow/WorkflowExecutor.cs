@@ -41,26 +41,24 @@ namespace Inceptum.Workflow
         private readonly INodesResolver<TContext> m_Nodes;
         private readonly Execution<TContext> m_Execution;
         private readonly TContext m_Context;
-        private readonly IActivityExecutor m_ActivityExecutor;
         private bool m_Resuming = false;
         private readonly object m_Closure;
         private readonly IExecutionObserver m_ExecutionObserver;
 
-        public WorkflowExecutor(Execution<TContext> execution, TContext context, INodesResolver<TContext> nodes, IActivityFactory factory,IActivityExecutor  activityExecutor,IExecutionObserver observer,object closure)
-            :this(execution,context,nodes,factory,activityExecutor,observer)
+        public WorkflowExecutor(Execution<TContext> execution, TContext context, INodesResolver<TContext> nodes, IActivityFactory factory, IExecutionObserver observer,object closure)
+            :this(execution,context,nodes,factory,observer)
         {
             m_Resuming = true;
             m_Closure = closure;
         }
 
-        public WorkflowExecutor(Execution<TContext> execution, TContext context, INodesResolver<TContext> nodes, IActivityFactory factory, IActivityExecutor activityExecutor, IExecutionObserver observer)
+        public WorkflowExecutor(Execution<TContext> execution, TContext context, INodesResolver<TContext> nodes, IActivityFactory factory,   IExecutionObserver observer)
         {
             m_ExecutionObserver = observer??new NullExecutionObserver();
             m_Context = context;
             m_Factory = factory;
             m_Execution = execution;
             m_Nodes = nodes;
-            m_ActivityExecutor=activityExecutor;
         }
 
         public WorkflowState Visit(IGraphNode<TContext> node)

@@ -322,8 +322,7 @@ namespace Inceptum.Workflow.Tests
         [Test]
         public void DelegateActivityTest()
         {
-            var executor = new FakeExecutor();
-            var wf = new Workflow<JObject>("", new InMemoryPersister<JObject>(), activityExecutor: executor);
+            var wf = new Workflow<JObject>("", new InMemoryPersister<JObject>() );
             wf.Configure(cfg => cfg.Do("node").End());
             wf.Node<string, string>("node", x=>activityMethod(x))
                 .WithInput(context => (string)(((dynamic)context).Input))
@@ -342,16 +341,6 @@ namespace Inceptum.Workflow.Tests
         public string activityMethod(string input)
         {
             return input+"!!!";
-        }
-    }
-
-    public class FakeExecutor : IActivityExecutor
-    {
-        public List<object> Input=new List<object>();
-        public ActivityResult Execute(string activityType, string nodeName, dynamic input, Action<dynamic> processOutput, Action<dynamic> processFailOutput)
-        {
-            Input.Add(input);
-            return ActivityResult.Pending;
         }
     }
 
