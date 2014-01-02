@@ -54,22 +54,31 @@ namespace Inceptum.Workflow
 
         public ActivityResult Execute(IActivityFactory factory, TContext context, out object activityInput, out object activityOutput)
         {
-            var activity = m_ActivityCreation(factory);
-            object actout=null;
-            var actInput = m_GetActivityInput(context);
-            activityInput = actInput;
+            IActivity<TInput, TOutput, TFailOutput> activity=null;
+            try
+            {
+                activity = m_ActivityCreation(factory);
+                object actout = null;
+                var actInput = m_GetActivityInput(context);
+                activityInput = actInput;
 
-            var result = activity.Execute(actInput, output =>
+                var result = activity.Execute(actInput, output =>
+                {
+                    actout = output;
+                    m_ProcessOutput(context, output);
+                }, output =>
+                {
+                    actout = output;
+                    m_ProcessFailOutput(context, output);
+                });
+                activityOutput = actout;
+                return result;
+            }
+            finally
             {
-                actout = output;
-                m_ProcessOutput(context, output);
-            }, output =>
-            {
-                actout = output;
-                m_ProcessFailOutput(context, output);
-            });
-            activityOutput = actout;
-            return result;
+                if(activity!=null)
+                factory.Release(activity);
+            }
         }
 
         public ActivityResult Resume<TClosure>(IActivityFactory factory, TContext context, TClosure closure, out object activityOutput)

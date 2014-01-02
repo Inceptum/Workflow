@@ -78,7 +78,7 @@ namespace Inceptum.Workflow
 
         public void Release<TActivity>(TActivity activity) where TActivity : IActivityWithOutput<object, object, object>
         {
-            m_ActivityFactory.Release(activity);
+            
         }
 
         #endregion
