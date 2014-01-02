@@ -17,7 +17,7 @@ namespace Inceptum.Workflow
         IEnumerable<GraphEdge<TContext>> Edges { get; }
         T Accept<T>(IWorkflowVisitor<TContext, T> workflowExecutor);
         void AddConstraint(string node, Func<TContext, ActivityResult, bool> condition, string description);
-        ISlotCreationHelper<TContext, TActivity> Activity<TActivity>(string activityName,params object[] activityCreationParams) where TActivity : IActivityWithOutput<object, object, object>;
+        ISlotCreationHelper<TContext, TActivity> Activity<TActivity>(string activityName,object activityCreationParams=null) where TActivity : IActivityWithOutput<object, object, object>;
         IActivitySlot<TContext> ActivitySlot
         {
             get;

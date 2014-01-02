@@ -147,7 +147,7 @@ namespace Inceptum.Workflow
             m_Constraints.Add(new GraphEdge<TContext>(node, condition, description));
         }
 
-        public ISlotCreationHelper<TContext, TActivity> Activity<TActivity>(string activityType,params object[] activityCreationParams) where TActivity : IActivityWithOutput<object, object, object>
+        public ISlotCreationHelper<TContext, TActivity> Activity<TActivity>(string activityType,object activityCreationParams=null) where TActivity : IActivityWithOutput<object, object, object>
         {
             return new SlotCreationHelper<TContext, TActivity>(this, activityType, activityCreationParams);
         }
@@ -180,10 +180,10 @@ namespace Inceptum.Workflow
     internal class SlotCreationHelper<TContext, TActivity> :ISlotCreationHelper<TContext,  TActivity>, ISlotCreationHelperWithNode<TContext>
         where TActivity : IActivityWithOutput<object, object, object>
     {
-        private readonly object[] m_ActivityCreationParams;
+        private readonly object m_ActivityCreationParams;
         private readonly string m_ActivityType;
 
-        public SlotCreationHelper(GraphNode<TContext> graphNode, string activityType, object[] activityCreationParams)
+        public SlotCreationHelper(GraphNode<TContext> graphNode, string activityType, object activityCreationParams)
         {
             m_ActivityType = activityType;
             m_ActivityCreationParams = activityCreationParams;

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Configuration;
 using System.Linq;
 using System.Linq.Expressions;
@@ -52,9 +53,29 @@ namespace Inceptum.Workflow
 
         #region IActivityFactory<TContext> Members
 
-        TActivity IActivityFactory.Create<TActivity>(params object[] activityCreationParams)
+        TActivity IActivityFactory.Create<TActivity>(object activityCreationParams)
         {
-            return (TActivity) Activator.CreateInstance(typeof(TActivity),activityCreationParams);
+
+            var values = new Dictionary<string, object>();
+            foreach (PropertyDescriptor descriptor in TypeDescriptor.GetProperties(activityCreationParams))
+            {
+                var value = descriptor.GetValue(activityCreationParams);
+                values.Add(descriptor.Name, value);
+            }
+           
+
+
+
+            var constructor = typeof(TActivity)
+                .GetConstructors()
+                .OrderByDescending(c => c.GetParameters().Length)
+                .FirstOrDefault(info => info.GetParameters().All(p=>values.ContainsKey(p.Name) && values[p.Name].GetType()==p.ParameterType));
+            if (constructor == null)
+                throw new MissingMethodException("No public constructor defined for this object");
+
+
+            var instance = constructor.Invoke(constructor.GetParameters().Select(p=>values[p.Name]).ToArray());
+            return (TActivity)instance;
         }
 
         #endregion
@@ -157,9 +178,9 @@ graph [ resolution=64];
  
         }
 
-        public ISlotCreationHelper<TContext, TActivity> Node<TActivity>(string name) where TActivity : IActivityWithOutput<object, object, object>
+        public ISlotCreationHelper<TContext, TActivity> Node<TActivity>(string name, object activityCreationParams=null) where TActivity : IActivityWithOutput<object, object, object>
         {
-            return Nodes[name].Activity<TActivity>(typeof(TActivity).Name);
+            return Nodes[name].Activity<TActivity>(typeof(TActivity).Name, activityCreationParams);
         }
  
         public ISlotCreationHelper<TContext, DelegateActivity<TInput, TOutput>> Node<TInput, TOutput>(string name, Expression<Func<TInput, TOutput>> method) 
@@ -174,7 +195,7 @@ graph [ resolution=64];
                 activityType = methodCall.Method.Name;
             }
             var activityMethod = method.Compile();
-            return Nodes[name].Activity<DelegateActivity<TInput, TOutput>>(activityType, activityMethod);
+            return Nodes[name].Activity<DelegateActivity<TInput, TOutput>>(activityType, new {activityMethod});
         }
     }
 
