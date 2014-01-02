@@ -13,7 +13,7 @@ namespace Inceptum.Workflow
         IGraphNode<TContext> this[string name] { get; }
     }
 
-    public class Workflow<TContext> : IActivityFactory , INodesResolver<TContext> 
+    public class Workflow<TContext> : IActivityFactory , INodesResolver<TContext> ,IDisposable
     {
         private readonly IGraphNode<TContext> m_End;
         private readonly IGraphNode<TContext> m_Fail;
@@ -74,6 +74,11 @@ namespace Inceptum.Workflow
 
             var instance = constructor.Invoke(constructor.GetParameters().Select(p=>values[p.Name]).ToArray());
             return (TActivity)instance;
+        }
+
+        public void Release<TActivity>(TActivity activity) where TActivity : IActivityWithOutput<object, object, object>
+        {
+            m_ActivityFactory.Release(activity);
         }
 
         #endregion
@@ -174,6 +179,11 @@ graph [ resolution=64];
 {0}
 }}", accept(generator));
  
+        }
+
+        public void Dispose()
+        {
+//TODO[KN]: release activity
         }
 
         public ISlotCreationHelper<TContext, TActivity> Node<TActivity>(string name, object activityCreationParams=null) where TActivity : IActivityWithOutput<object, object, object>

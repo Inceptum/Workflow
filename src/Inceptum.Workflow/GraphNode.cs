@@ -127,11 +127,7 @@ namespace Inceptum.Workflow
  
         public GraphNode(string name)
         {
-/*            var activitySlot = new ActivitySlot<TContext, TInput, TOutput, TFailOutput>(factory => factory.Create<TActivity>(activityCreationParams),getActivityInput);
-            activitySlot.ProcessOutput(processOutput).ProcessFailOutput(processFailOutput);
-            m_ActivitySlot = activitySlot;*/
             Name = name;
-//            ActivityType = activityType ?? typeof(TActivity).Name;
         }
 
         public T Accept<T>(IWorkflowVisitor<TContext, T> workflowExecutor)
