@@ -9,7 +9,7 @@ namespace Inceptum.Workflow
     interface IActivitySlot<TContext>
     {
         string ActivityType { get; }
-        ActivityResult Execute(IActivityFactory factory, TContext context, out object activityInput, out object activityOutput);
+        ActivityResult Execute(IActivityFactory factory, TContext context, out object activityOutput, Action<object> beforeExecute);
         ActivityResult Resume<TClosure>(IActivityFactory factory, TContext context, TClosure closure, out object activityOutput);
     }
 
@@ -52,17 +52,16 @@ namespace Inceptum.Workflow
             get; private set;
         }
 
-        public ActivityResult Execute(IActivityFactory factory, TContext context, out object activityInput, out object activityOutput)
+        public ActivityResult Execute(IActivityFactory factory, TContext context, out object activityOutput, Action<object> beforeExecute)
         {
             IActivity<TInput, TOutput, TFailOutput> activity=null;
             try
             {
                 activity = m_ActivityCreation(factory);
                 object actout = null;
-                var actInput = m_GetActivityInput(context);
-                activityInput = actInput;
-
-                var result = activity.Execute(actInput, output =>
+                var activityInput = m_GetActivityInput(context);
+                beforeExecute(activityInput);
+                var result = activity.Execute(activityInput, output =>
                 {
                     actout = output;
                     m_ProcessOutput(context, output);

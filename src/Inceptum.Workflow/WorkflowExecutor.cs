@@ -66,21 +66,25 @@ namespace Inceptum.Workflow
             object activityOutput = null;
             ActivityResult result;
             m_Execution.ActiveNode = node.Name;
+
             if (m_Resuming)
             {
-                result = node.ActivitySlot == null //NOTE[MT]: IMHO ActivitySlot should not be null, but some DefaultActivitySlot which result is alwasy ActivityResult.Succeeded
+                result = node.ActivitySlot == null
+                             //NOTE[MT]: IMHO ActivitySlot should not be null, but some DefaultActivitySlot which result is alwasy ActivityResult.Succeeded
                              ? ActivityResult.Succeeded
                              : node.ActivitySlot.Resume(m_Factory, m_Context, m_Closure, out activityOutput);
             }
             else
             {
-                object activityInput = null;
-
-                result = node.ActivitySlot == null
-                             ? ActivityResult.Succeeded
-                             : node.ActivitySlot.Execute(m_Factory, m_Context, out activityInput, out activityOutput);
-
-                m_ExecutionObserver.ActivityStarted(node.Name, node.ActivityType, activityInput);
+                if (node.ActivitySlot == null)
+                {
+                    result = ActivityResult.Succeeded;
+                    m_ExecutionObserver.ActivityStarted(node.Name, node.ActivityType, null);
+                }
+                else
+                {
+                    result = node.ActivitySlot.Execute(m_Factory, m_Context, out activityOutput, activityInput => m_ExecutionObserver.ActivityStarted(node.Name, node.ActivityType, activityInput));
+                }
             }
 
             m_Resuming = false;
