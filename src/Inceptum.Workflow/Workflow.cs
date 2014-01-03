@@ -191,8 +191,8 @@ graph [ resolution=64];
         {
             return Nodes[name].Activity<TActivity>(activityType??typeof(TActivity).Name, activityCreationParams);
         }
- 
-        public ISlotCreationHelper<TContext, DelegateActivity<TInput, TOutput>> Node<TInput, TOutput>(string name, Expression<Func<TInput, TOutput>> method) 
+
+        public ISlotCreationHelper<TContext, DelegateActivity<TInput, TOutput>> DelegateNode<TInput, TOutput>(string name, Expression<Func<TInput, TOutput>> method) 
             where TInput : class where TOutput : class
         
         {
@@ -208,7 +208,7 @@ graph [ resolution=64];
             return Nodes[name].Activity<DelegateActivity<TInput, TOutput>>(activityType, new {activityMethod});
         }
 
-        public IActivitySlot<TContext, object, TOutput, Exception> Node<TOutput>(string name, Expression<Func<TContext, TOutput>> method) where TOutput : class
+        public IActivitySlot<TContext, object, TOutput, Exception> DelegateNode<TOutput>(string name, Expression<Func<TContext, TOutput>> method) where TOutput : class
         {
             var methodCall = method.Body as MethodCallExpression;
             string activityType = "DelegateActivity";
@@ -222,7 +222,7 @@ graph [ resolution=64];
             return Nodes[name].Activity<DelegateActivity<object, TOutput>>(activityType, new { activityMethod }).WithInput(context => (object)context);
         }
 
-        public IActivitySlot<TContext, object, object, Exception> Node(string name, Expression<Action<TContext>> method) 
+        public IActivitySlot<TContext, object, object, Exception> DelegateNode(string name, Expression<Action<TContext>> method) 
         {
             var methodCall = method.Body as MethodCallExpression;
             string activityType = "DelegateActivity";

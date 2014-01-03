@@ -322,7 +322,7 @@ namespace Inceptum.Workflow.Tests
         {
             var wf = new Workflow<JObject>("", new InMemoryPersister<JObject>() );
             wf.Configure(cfg => cfg.Do("node").End());
-            wf.Node<string, string>("node", x=>activityMethod(x))
+            wf.DelegateNode<string, string>("node", x => activityMethod(x))
                 .WithInput(context => (string)(((dynamic)context).Input))
                 .ProcessOutput((context, output) => ((dynamic)context).Output=output);
 
