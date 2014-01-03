@@ -205,7 +205,7 @@ graph [ resolution=64];
             }
             var activityMethod = method.Compile();
 
-            return Nodes[name].Activity<DelegateActivity<TInput, TOutput>>(activityType, new {activityMethod});
+            return Nodes[name].Activity<DelegateActivity<TInput, TOutput>>(activityType, new { activityMethod, isInputSerializable = true});
         }
 
         public IActivitySlot<TContext, object, TOutput, Exception> DelegateNode<TOutput>(string name, Expression<Func<TContext, TOutput>> method) where TOutput : class
@@ -219,7 +219,7 @@ graph [ resolution=64];
             }
             Func<TContext, TOutput> compiled = method.Compile();
             Func<object, TOutput> activityMethod = context => compiled((TContext)context);
-            return Nodes[name].Activity<DelegateActivity<object, TOutput>>(activityType, new { activityMethod }).WithInput(context => (object)context);
+            return Nodes[name].Activity<DelegateActivity<object, TOutput>>(activityType, new { activityMethod, isInputSerializable=false }).WithInput(context => (object)context);
         }
 
         public IActivitySlot<TContext, object, object, Exception> DelegateNode(string name, Expression<Action<TContext>> method) 
@@ -237,17 +237,24 @@ graph [ resolution=64];
                 compiled((TContext) context);
                 return null;
             };
-            return Nodes[name].Activity<DelegateActivity<object, object>>(activityType, new { activityMethod }).WithInput(context =>(object)context);
+            return Nodes[name].Activity<DelegateActivity<object, object>>(activityType, new { activityMethod, isInputSerializable = false }).WithInput(context => (object)context);
         }
     }
 
     public class DelegateActivity<TInput, TOutput> :ActivityBase<TInput, TOutput,Exception> where TInput : class where TOutput : class
     {
         private readonly Func<TInput, TOutput> m_ActivityMethod;
+        private readonly bool m_IsInputSerializable;
 
-        public DelegateActivity(Func<TInput, TOutput> activityMethod)
+        public DelegateActivity(Func<TInput, TOutput> activityMethod, bool isInputSerializable)
         {
             m_ActivityMethod = activityMethod;
+            m_IsInputSerializable = isInputSerializable;
+        }
+
+        public override bool IsInputSerializable
+        {
+            get { return m_IsInputSerializable; }
         }
 
         public override ActivityResult Execute(TInput input, Action<TOutput> processOutput, Action<Exception> processFailOutput)

@@ -14,6 +14,11 @@ namespace Inceptum.Workflow
         where TOutput : class
         where TFailOutput : class
     {
+        public virtual bool IsInputSerializable
+        {
+            get { return false; }
+        }
+
         public abstract ActivityResult Execute(TInput input, Action<TOutput> processOutput, Action<TFailOutput> processFailOutput);
 
         public virtual ActivityResult Resume<TClosure>(Action<TOutput> processOutput, Action<TFailOutput> processFailOutput, TClosure closure)

@@ -10,6 +10,7 @@ namespace Inceptum.Workflow
     public interface IActivity<TInput, out TOutput, out TFailOutput> : IActivityWithOutput<TInput, TOutput, TFailOutput>
         where TInput : class where TOutput : class where TFailOutput : class
     {
+        bool IsInputSerializable { get; }
         ActivityResult Execute(TInput input, Action<TOutput> processOutput, Action<TFailOutput> processFailOutput);
     }
 }
