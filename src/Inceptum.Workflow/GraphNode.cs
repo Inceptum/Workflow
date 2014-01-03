@@ -43,6 +43,7 @@ namespace Inceptum.Workflow
             activityOutput = null;
             return ActivityResult.Succeeded;
         }
+
     }
 
     internal class ActivitySlot<TContext, TInput, TOutput, TFailOutput> : IActivitySlot<TContext>, IActivitySlot<TContext, TInput, TOutput, TFailOutput>
@@ -53,7 +54,7 @@ namespace Inceptum.Workflow
         private readonly Func<TContext, TInput> m_GetActivityInput;
         private Action<TContext, TOutput> m_ProcessOutput= (context, output) => { };
         private Action<TContext, TFailOutput> m_ProcessFailOutput= (context, output) => { };
-        private Func<IActivityFactory,IActivity<TInput, TOutput, TFailOutput>> m_ActivityCreation;
+        private readonly Func<IActivityFactory,IActivity<TInput, TOutput, TFailOutput>> m_ActivityCreation;
 
         public ActivitySlot(Func<IActivityFactory, IActivity<TInput, TOutput, TFailOutput>> activityCreation, Func<TContext, TInput> getInput,string activityType)
         {
@@ -125,15 +126,7 @@ namespace Inceptum.Workflow
         
         }
     }
-
-/*
-    internal class GraphNode<TContext> : GraphNode<TContext,GenericActivity, dynamic, dynamic,dynamic>
-    {
-        public GraphNode(string name, string activityType, Func<TContext, dynamic> getActivityInput, Action<TContext, dynamic> processOutput, Action<TContext, dynamic> processFailOutput, params object[] activityCreationParams)
-            : base(name, activityType, getActivityInput, processOutput,processFailOutput, activityCreationParams)
-        {
-        }
-    }*/
+     
 
 
 
