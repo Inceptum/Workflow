@@ -75,10 +75,12 @@ namespace Inceptum.Workflow
             else
             {
                 object activityInput = null;
+                
+                m_ExecutionObserver.ActivityStarted(node.Name, node.ActivityType, activityInput);
+
                 result = node.ActivitySlot == null
                              ? ActivityResult.Succeeded
                              : node.ActivitySlot.Execute(m_Factory, m_Context, out activityInput, out activityOutput);
-                m_ExecutionObserver.ActivityStarted(node.Name, node.ActivityType, activityInput);
             }
 
             m_Resuming = false;
