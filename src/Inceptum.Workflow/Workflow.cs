@@ -208,7 +208,6 @@ graph [ resolution=64];
             return Nodes[name].Activity<DelegateActivity<TInput, TOutput>>(activityType, new {activityMethod});
         }
 
-
         public IActivitySlot<TContext, object, TOutput, Exception> Node<TOutput>(string name, Expression<Func<TContext, TOutput>> method) where TOutput : class
         {
             var methodCall = method.Body as MethodCallExpression;
@@ -221,6 +220,24 @@ graph [ resolution=64];
             Func<TContext, TOutput> compiled = method.Compile();
             Func<object, TOutput> activityMethod = context => compiled((TContext)context);
             return Nodes[name].Activity<DelegateActivity<object, TOutput>>(activityType, new { activityMethod }).WithInput(context => (object)context);
+        }
+
+        public IActivitySlot<TContext, object, object, Exception> Node(string name, Expression<Action<TContext>> method) 
+        {
+            var methodCall = method.Body as MethodCallExpression;
+            string activityType = "DelegateActivity";
+
+            if (methodCall != null)
+            {
+                activityType += " " + methodCall.Method.Name;
+            }
+            Action<TContext> compiled = method.Compile();
+            Func<object,object> activityMethod = context =>
+            {
+                compiled((TContext) context);
+                return null;
+            };
+            return Nodes[name].Activity<DelegateActivity<object, object>>(activityType, new { activityMethod }).WithInput(context =>(object)context);
         }
     }
 
