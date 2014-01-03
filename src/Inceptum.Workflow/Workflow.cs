@@ -219,7 +219,7 @@ graph [ resolution=64];
             }
             Func<TContext, TOutput> compiled = method.Compile();
             Func<object, TOutput> activityMethod = context => compiled((TContext)context);
-            return Nodes[name].Activity<DelegateActivity<object, TOutput>>(activityType, new { activityMethod, isInputSerializable=false }).WithInput(context => (object)context);
+            return Nodes[name].Activity<DelegateActivity<object, TOutput>>(activityType, new { activityMethod, isInputSerializable = false }).WithInput(context => (object)context);
         }
 
         public IActivitySlot<TContext, object, object, Exception> DelegateNode(string name, Expression<Action<TContext>> method) 

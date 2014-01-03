@@ -16,7 +16,7 @@ namespace Inceptum.Workflow
     {
         public virtual bool IsInputSerializable
         {
-            get { return false; }
+            get { return true; }
         }
 
         public abstract ActivityResult Execute(TInput input, Action<TOutput> processOutput, Action<TFailOutput> processFailOutput);
