@@ -187,9 +187,9 @@ graph [ resolution=64];
 //TODO[KN]: release activity
         }
 
-        public ISlotCreationHelper<TContext, TActivity> Node<TActivity>(string name, object activityCreationParams=null) where TActivity : IActivityWithOutput<object, object, object>
+        public ISlotCreationHelper<TContext, TActivity> Node<TActivity>(string name, object activityCreationParams=null,string activityType=null) where TActivity : IActivityWithOutput<object, object, object>
         {
-            return Nodes[name].Activity<TActivity>(typeof(TActivity).Name, activityCreationParams);
+            return Nodes[name].Activity<TActivity>(activityType??typeof(TActivity).Name, activityCreationParams);
         }
  
         public ISlotCreationHelper<TContext, DelegateActivity<TInput, TOutput>> Node<TInput, TOutput>(string name, Expression<Func<TInput, TOutput>> method) 
