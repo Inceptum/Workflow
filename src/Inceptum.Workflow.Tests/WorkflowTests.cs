@@ -87,8 +87,7 @@ namespace Inceptum.Workflow.Tests
                 .WithBranch().Do("node2").End());
 
         }
-
-
+        
         [Test]
         public void StraightExecutionFlowTest()
         {
@@ -96,14 +95,13 @@ namespace Inceptum.Workflow.Tests
             wf.Configure(cfg => cfg.Do("node1").Do("node2").End());
             wf.Node<TestActivity1>("node1").WithInput(list => list).ProcessOutput((context, output) => context.Add("TestActivity1"));
             wf.Node<TestActivity2>("node2").WithInput(list => list).ProcessOutput((context, output) => context.Add("TestActivity2"));
-
          
             var wfContext = new List<string>();
             var execution = wf.Run(wfContext);
             Assert.That(execution.State, Is.EqualTo(WorkflowState.Complete));
             Assert.That(wfContext, Is.EquivalentTo(new[] {"TestActivity1", "TestActivity2"}), "Wrong activities were executed");
         }
-
+     
         [Test]
         public void WorkflowCorruptsOnActivityFailWithoutExplicitFailBranchTest()
         {
@@ -341,6 +339,56 @@ namespace Inceptum.Workflow.Tests
         public string activityMethod(string input)
         {
             return input+"!!!";
+        }
+
+        [Test]
+        public void ExecutionObserverStraightExecutionFlowTest()
+        {
+            StubExecutionObserver eo = new StubExecutionObserver();
+            var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>(), null, eo);
+            wf.Configure(cfg => cfg.Do("node1").Do("node2").End());
+            wf.Node<TestActivity1>("node1").WithInput(list => list).ProcessOutput((context, output) => context.Add("TestActivity1"));
+            wf.Node<TestActivity2>("node2").WithInput(list => list).ProcessOutput((context, output) => context.Add("TestActivity2"));
+
+            var wfContext = new List<string>();
+            var execution = wf.Run(wfContext);
+            Assert.That(execution.State, Is.EqualTo(WorkflowState.Complete));
+            Assert.That(wfContext, Is.EquivalentTo(new[] { "TestActivity1", "TestActivity2" }), "Wrong activities were executed");
+
+            CollectionAssert.AreEqual(new[]{"start","node1", "node2","end"}, eo.State.Keys);
+        }
+    }
+
+    internal class StubExecutionObserver : IExecutionObserver
+    {
+        private readonly Dictionary<string, string> m_State = new Dictionary<string, string>();
+
+        public Dictionary<string, string> State
+        {
+            get { return m_State; }
+        }
+
+        public void ActivityStarted(string node, string activityType, object inputValues)
+        {
+            State.Add(node, "started");
+        }
+
+        public void ActivityFinished(string node, string activityType, object outputValues)
+        {
+            if(!State.ContainsKey(node)) throw new Exception(string.Format("Trying to finish not started node {0}", node));
+            State[node] = "finished";
+        }
+
+        public void ActivityFailed(string node, string activityType, object outputValues)
+        {
+            if (!State.ContainsKey(node)) throw new Exception(string.Format("Trying to fail not started node {0}", node));
+            State[node] = "failed";
+        }
+
+        public void ActivityCorrupted(string node, string activityType)
+        {
+            if (!State.ContainsKey(node)) throw new Exception(string.Format("Trying to corrupt not started node {0}", node));
+            State[node] = "corrupted";
         }
     }
 

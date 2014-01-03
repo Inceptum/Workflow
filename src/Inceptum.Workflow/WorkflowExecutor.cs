@@ -63,26 +63,24 @@ namespace Inceptum.Workflow
 
         public WorkflowState Visit(IGraphNode<TContext> node)
         {
-            object activityOutput=null;
+            object activityOutput = null;
             ActivityResult result;
             m_Execution.ActiveNode = node.Name;
-
-            if (node.ActivitySlot == null)
-                result = ActivityResult.Succeeded;
+            if (m_Resuming)
+            {
+                result = node.ActivitySlot == null //NOTE[MT]: IMHO ActivitySlot should not be null, but some DefaultActivitySlot which result is alwasy ActivityResult.Succeeded
+                             ? ActivityResult.Succeeded
+                             : node.ActivitySlot.Resume(m_Factory, m_Context, m_Closure, out activityOutput);
+            }
             else
             {
-                if (m_Resuming)
-                {
-                    result = node.ActivitySlot.Resume(m_Factory, m_Context, m_Closure, out activityOutput);
-
-                }
-                else
-                {
-                    object activityInput;
-                    result = node.ActivitySlot.Execute(m_Factory, m_Context, out activityInput, out activityOutput);
-                    m_ExecutionObserver.ActivityStarted(node.Name, node.ActivityType, activityInput);
-                }
+                object activityInput = null;
+                result = node.ActivitySlot == null
+                             ? ActivityResult.Succeeded
+                             : node.ActivitySlot.Execute(m_Factory, m_Context, out activityInput, out activityOutput);
+                m_ExecutionObserver.ActivityStarted(node.Name, node.ActivityType, activityInput);
             }
+
             m_Resuming = false;
 
             if (result == ActivityResult.Pending)
@@ -105,7 +103,7 @@ namespace Inceptum.Workflow
 
             if (result == ActivityResult.Succeeded)
             {
-                m_ExecutionObserver.ActivityFinished(node.Name, node.ActivityType,activityOutput);
+                m_ExecutionObserver.ActivityFinished(node.Name, node.ActivityType, activityOutput);
             }
 
             var next = node.Edges.SingleOrDefault(e => e.Condition(m_Context, result));
@@ -124,7 +122,7 @@ namespace Inceptum.Workflow
                 return WorkflowState.Complete;
             }
 
-           //TODO: =="end" is not good idea
+            //TODO: =="end" is not good idea
             if (node.Name == "fail")
             {
                 m_Execution.State = WorkflowState.Failed;
@@ -133,7 +131,6 @@ namespace Inceptum.Workflow
 
             m_Execution.State = WorkflowState.Corrupted;
             return WorkflowState.Corrupted;
-
         }
     }
 }

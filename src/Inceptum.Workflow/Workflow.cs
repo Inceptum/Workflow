@@ -32,6 +32,7 @@ namespace Inceptum.Workflow
             m_Start = new GraphNode<TContext>("start");
             m_End = new GraphNode<TContext>("end");
             m_Fail = new GraphNode<TContext>("fail");
+            registerNode(m_Start);
             registerNode(m_End);
             registerNode(m_Fail);
         }
