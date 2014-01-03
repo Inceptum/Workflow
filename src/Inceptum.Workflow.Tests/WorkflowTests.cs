@@ -332,7 +332,7 @@ namespace Inceptum.Workflow.Tests
             wf.Run(wfContext);
             dynamic o = wfContext;
             Assert.That(((string)(o.Output)), Is.EqualTo("test!!!"), "delegate was not executed");
-            Assert.That(wf.Nodes["node"].ActivityType, Is.EqualTo("activityMethod"),"Wrong activity type");
+            Assert.That(wf.Nodes["node"].ActivityType, Is.EqualTo("DelegateActivity activityMethod"), "Wrong activity type");
         }
 
 

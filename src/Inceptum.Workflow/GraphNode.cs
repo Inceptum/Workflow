@@ -3,9 +3,6 @@ using System.Collections.Generic;
 
 namespace Inceptum.Workflow
 {
-    
-
-
     interface IActivitySlot<TContext>
     {
         string ActivityType { get; }
@@ -17,6 +14,35 @@ namespace Inceptum.Workflow
     {
         IActivitySlot<TContext, TInput, TOutput, TFailOutput> ProcessOutput(Action<TContext, TOutput> processOutput);
         IActivitySlot<TContext, TInput, TOutput, TFailOutput> ProcessFailOutput(Action<TContext, TFailOutput> processFailOutput);
+    }
+
+    internal class EmptyActivitySlot<TContext> :  IActivitySlot<TContext>
+    {
+        public EmptyActivitySlot(string activityType)
+        {
+            if (activityType == null) throw new ArgumentNullException("activityType");
+            m_ActivityType = activityType;
+        }
+
+        private readonly string m_ActivityType;
+
+        public string ActivityType
+        {
+            get { return m_ActivityType; }
+        }
+
+        public ActivityResult Execute(IActivityFactory factory, TContext context, out object activityOutput, Action<object> beforeExecute)
+        {
+            beforeExecute(null);
+            activityOutput = null;
+            return ActivityResult.Succeeded;
+        }
+
+        public ActivityResult Resume<TClosure>(IActivityFactory factory, TContext context, TClosure closure, out object activityOutput)
+        {
+            activityOutput = null;
+            return ActivityResult.Succeeded;
+        }
     }
 
     internal class ActivitySlot<TContext, TInput, TOutput, TFailOutput> : IActivitySlot<TContext>, IActivitySlot<TContext, TInput, TOutput, TFailOutput>
@@ -115,7 +141,7 @@ namespace Inceptum.Workflow
     {
         private IActivitySlot<TContext> m_ActivitySlot;
         private readonly List<GraphEdge<TContext>> m_Constraints = new List<GraphEdge<TContext>>();
-
+        
         public string Name { get; private set; }
 
         public string ActivityType
@@ -131,28 +157,26 @@ namespace Inceptum.Workflow
             get { return m_ActivitySlot; }
         }
  
-
- 
         public GraphNode(string name)
         {
             Name = name;
+            m_ActivitySlot = new EmptyActivitySlot<TContext>(name);
         }
 
         public T Accept<T>(IWorkflowVisitor<TContext, T> workflowExecutor)
         {
             return workflowExecutor.Visit(this);
         }
-  
-  
-
 
         public virtual void AddConstraint(string node, Func<TContext, ActivityResult, bool> condition, string description)
         {
+
             m_Constraints.Add(new GraphEdge<TContext>(node, condition, description));
         }
 
         public ISlotCreationHelper<TContext, TActivity> Activity<TActivity>(string activityType,object activityCreationParams=null) where TActivity : IActivityWithOutput<object, object, object>
         {
+            m_ActivitySlot = new EmptyActivitySlot<TContext>(activityType);
             return new SlotCreationHelper<TContext, TActivity>(this, activityType, activityCreationParams);
         }
 

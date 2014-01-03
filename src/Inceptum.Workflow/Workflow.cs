@@ -197,11 +197,11 @@ graph [ resolution=64];
         
         {
             var methodCall = method.Body as MethodCallExpression;
-            string activityType = null;
+            string activityType = "DelegateActivity";
 
             if (methodCall != null)
             {
-                activityType = methodCall.Method.Name;
+                activityType += " " + methodCall.Method.Name;
             }
             var activityMethod = method.Compile();
             return Nodes[name].Activity<DelegateActivity<TInput, TOutput>>(activityType, new {activityMethod});
