@@ -1,4 +1,5 @@
 using System;
+using System.Configuration;
 using System.Linq;
 
 namespace Inceptum.Workflow
@@ -96,11 +97,17 @@ namespace Inceptum.Workflow
                 m_ExecutionObserver.ActivityFinished(node.Name, node.ActivityType, activityOutput);
             }
 
-            var next = node.Edges.SingleOrDefault(e => e.Condition(m_Context, result));
+            var edges = node.Edges.Where(e => e.Condition(m_Context, result)).ToArray();
 
-            if (next != null)
+            if(edges.Length>1)
+                throw new ConfigurationErrorsException("Failed to get next node - more then one transition condition was met: " + Environment.NewLine+string.Join(Environment.NewLine, edges.Select(e => string.Format("[{0}]-{1}-> [{2}]", node.Name, e.Description, e.Node))));
+            if(edges.Length==0)
+                throw new ConfigurationErrorsException("Failed to get next node - none of transition condition was met: " + Environment.NewLine + string.Join(Environment.NewLine, node.Edges.Select(e => string.Format("[{0}]-{1}-> [{2}]", node.Name, e.Description, e.Node))));
+            var transition = edges[0];
+
+            if (transition != null)
             {
-                var nextNode = m_Nodes[next.Node];
+                var nextNode = m_Nodes[transition.Node];
                 var nextResult = nextNode.Accept(this);
                 return nextResult;
             }
