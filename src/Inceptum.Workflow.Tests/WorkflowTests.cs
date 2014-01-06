@@ -89,6 +89,16 @@ namespace Inceptum.Workflow.Tests
         }
         
         [Test]
+        [ExpectedException(typeof(ConfigurationErrorsException), ExpectedMessage = "Can not create node 'node1', node with this name already exists")]
+        public void DuplicateNodeNameFailureTest()
+        {
+            var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>());
+            wf.Configure(cfg =>
+                cfg.Do("node1").Do("node1").End());
+
+        }
+        
+        [Test]
         public void StraightExecutionFlowTest()
         {
             var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>());

@@ -143,6 +143,8 @@ namespace Inceptum.Workflow
 
         internal IGraphNode<TContext> CreateNode(string name,  params string[] aliases)
         {
+            if (m_Nodes.ContainsKey(name))
+                throw new ConfigurationErrorsException(string.Format("Can not create node '{0}', node with this name already exists", name));
             var node = new GraphNode<TContext>(name);
             registerNode(node, aliases);
             return node;
