@@ -99,11 +99,19 @@ namespace Inceptum.Workflow
 
             var edges = node.Edges.Where(e => e.Condition(m_Context, result)).ToArray();
 
-            if(edges.Length>1)
-                throw new ConfigurationErrorsException("Failed to get next node - more then one transition condition was met: " + Environment.NewLine+string.Join(Environment.NewLine, edges.Select(e => string.Format("[{0}]-{1}-> [{2}]", node.Name, e.Description, e.Node))));
-            if(edges.Length==0)
-                throw new ConfigurationErrorsException("Failed to get next node - none of transition condition was met: " + Environment.NewLine + string.Join(Environment.NewLine, node.Edges.Select(e => string.Format("[{0}]-{1}-> [{2}]", node.Name, e.Description, e.Node))));
-            var transition = edges[0];
+            if(edges.Length>1){
+                m_Execution.Error = "Failed to get next node - more then one transition condition was met: " + Environment.NewLine+string.Join(Environment.NewLine, edges.Select(e => string.Format("[{0}]-{1}-> [{2}]", node.Name, e.Description, e.Node)));
+                m_Execution.State = WorkflowState.Corrupted;
+                return WorkflowState.Corrupted;
+            }
+            if (edges.Length == 0 && node.Name != "end" && node.Name != "fail")
+            {
+                m_Execution.Error = "Failed to get next node - none of transition condition was met: " + Environment.NewLine + string.Join(Environment.NewLine,node.Edges.Select(e => string.Format("[{0}]-{1}-> [{2}]", node.Name, e.Description, e.Node)));
+                m_Execution.State = WorkflowState.Corrupted;
+                return WorkflowState.Corrupted;
+            }
+
+            var transition = edges.FirstOrDefault();
 
             if (transition != null)
             {

@@ -7,6 +7,7 @@ namespace Inceptum.Workflow
     {
         public string ActiveNode { get;  set; }
         public WorkflowState State { get; set; }
+        public string Error { get; set; }
     }
 
     public interface IExecutionObserver

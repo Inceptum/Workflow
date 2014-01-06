@@ -89,7 +89,6 @@ namespace Inceptum.Workflow.Tests
         }
         
         [Test]
-        [ExpectedException(typeof (ConfigurationErrorsException), ExpectedMessage = "Failed to get next node - more then one transition condition was met: \r\n[node1]-Success-> [node2]\r\n[node1]-Success-> [end]")]
         public void MultipleEdgesFailureTest()
         {
             var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>());
@@ -97,11 +96,12 @@ namespace Inceptum.Workflow.Tests
                 cfg.Do("node1").ContinueWith("node2").End()
                 .WithBranch().Do("node2").End());
 
-            wf.Run(new List<string>());
+            var execution = wf.Run(new List<string>());
+            Assert.That(execution.State,Is.EqualTo(WorkflowState.Corrupted));
+            Assert.That(execution.Error, Is.EqualTo("Failed to get next node - more then one transition condition was met: \r\n[node1]-Success-> [node2]\r\n[node1]-Success-> [end]"));
         }
         
         [Test]
-        [ExpectedException(typeof(ConfigurationErrorsException), ExpectedMessage = "Failed to get next node - more then one transition condition was met: \r\n[node1]-conditionName-> [node2]\r\n[node1]-Success-> [end]")]
         public void MultipleEdgesWithNamedEdgesFailureTest()
         {
             var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>());
@@ -109,11 +109,12 @@ namespace Inceptum.Workflow.Tests
                 cfg.Do("node1").On("conditionName").DeterminedAs(x=>true).ContinueWith("node2").End()
                 .WithBranch().Do("node2").End());
 
-            wf.Run(new List<string>());
+            var execution = wf.Run(new List<string>());
+            Assert.That(execution.State, Is.EqualTo(WorkflowState.Corrupted));
+            Assert.That(execution.Error, Is.EqualTo("Failed to get next node - more then one transition condition was met: \r\n[node1]-conditionName-> [node2]\r\n[node1]-Success-> [end]"));
         }
         
         [Test]
-        [ExpectedException(typeof(ConfigurationErrorsException), ExpectedMessage = "Failed to get next node - none of transition condition was met: \r\n[node1]-conditionName1-> [node2]\r\n[node1]-conditionName2-> [end]")]
         public void NoMatchingEdgesFailureTest()
         {
             var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>());
@@ -123,7 +124,9 @@ namespace Inceptum.Workflow.Tests
                 .On("conditionName2").DeterminedAs(x=>false).End()
                 .WithBranch().Do("node2").End());
 
-            wf.Run(new List<string>());
+            var execution = wf.Run(new List<string>());
+            Assert.That(execution.State, Is.EqualTo(WorkflowState.Corrupted));
+            Assert.That(execution.Error, Is.EqualTo("Failed to get next node - none of transition condition was met: \r\n[node1]-conditionName1-> [node2]\r\n[node1]-conditionName2-> [end]"));
         }
         
         [Test]
