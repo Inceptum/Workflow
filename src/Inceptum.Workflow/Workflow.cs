@@ -115,7 +115,15 @@ namespace Inceptum.Workflow
         {
             var execution = new Execution<TContext> { State = WorkflowState.InProgress };
             var executor = new WorkflowExecutor<TContext>(execution, context, this, m_ActivityFactory,  m_ExecutionObserver);
-            accept(executor);
+            try
+            {
+                accept(executor);
+            }
+            catch (Exception e)
+            {
+                execution.Error = e.ToString();
+                execution.State = WorkflowState.Corrupted;
+            }
             m_Persister.Save(context, execution);
             return execution;
         }
@@ -126,7 +134,15 @@ namespace Inceptum.Workflow
             var execution = m_Persister.Load(context);
             var executor = new WorkflowExecutor<TContext>(execution, context, this, m_ActivityFactory,  m_ExecutionObserver, closure);
             string node = execution.ActiveNode;
-            accept(executor, node);
+            try
+            {
+                accept(executor, node);
+            }
+            catch (Exception e)
+            {
+                execution.Error = e.ToString();
+                execution.State = WorkflowState.Corrupted;
+            }
             m_Persister.Save(context, execution);
             return execution;
         }
@@ -135,7 +151,15 @@ namespace Inceptum.Workflow
         {
             var execution = m_Persister.Load(context);
             var executor = new WorkflowExecutor<TContext>(execution, context, this, m_ActivityFactory,  m_ExecutionObserver);
-            accept(executor, node);
+            try
+            {
+                accept(executor, node);
+            }
+            catch (Exception e)
+            {
+                execution.Error = e.ToString();
+                execution.State = WorkflowState.Corrupted;
+            }
             m_Persister.Save(context, execution);
             return execution;
         }
