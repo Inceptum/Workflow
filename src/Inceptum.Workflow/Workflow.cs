@@ -129,19 +129,29 @@ namespace Inceptum.Workflow
         }
 
 
-        public virtual Execution<TContext> Resume<TClosure>(TContext context, TClosure closure)
+        public virtual Execution<TContext> Resume<TClosure>(TContext context, Guid activityExecutionId, TClosure closure)
         {
             var execution = m_Persister.Load(context);
-            var executor = new WorkflowExecutor<TContext>(execution, context, this, m_ActivityFactory,  m_ExecutionObserver, closure);
-            string node = execution.ActiveNode;
-            try
+            
+            var activityExecution = execution.ExecutingActivities.FirstOrDefault(a => a.Id == activityExecutionId);
+            if (activityExecution == null)
             {
-                accept(executor, node);
-            }
-            catch (Exception e)
-            {
-                execution.Error = e.ToString();
+                execution.Error = string.Format("Failed to resume. Provided activity execution id '{0}' not found", activityExecutionId);
                 execution.State = WorkflowState.Corrupted;
+            }
+            else
+            {
+                var executor = new WorkflowExecutor<TContext>(execution, context, this, m_ActivityFactory, m_ExecutionObserver, activityExecution, closure);
+                try
+                {
+                    string node = activityExecution.Node;
+                    accept(executor, node);
+                }
+                catch (Exception e)
+                {
+                    execution.Error = e.ToString();
+                    execution.State = WorkflowState.Corrupted;
+                }
             }
             m_Persister.Save(context, execution);
             return execution;
@@ -283,7 +293,7 @@ graph [ resolution=64];
             get { return m_IsInputSerializable; }
         }
 
-        public override ActivityResult Execute(TInput input, Action<TOutput> processOutput, Action<Exception> processFailOutput)
+        public override ActivityResult Execute(Guid activityExecutionId, TInput input, Action<TOutput> processOutput, Action<Exception> processFailOutput)
         {
             try
             {

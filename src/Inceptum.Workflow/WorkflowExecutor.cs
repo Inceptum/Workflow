@@ -18,20 +18,20 @@ namespace Inceptum.Workflow
 
     class NullExecutionObserver : IExecutionObserver
     {
-        public void ActivityStarted(string node, string activityType, object inputValues)
+        public void ActivityStarted(Guid activityExecutionId, string node, string activityType, object inputValues)
         {
             
         }
 
-        public void ActivityFinished(string node, string activityType, object outputValues)
+        public void ActivityFinished(Guid activityExecutionId, string node, string activityType, object outputValues)
         {
         }
 
-        public void ActivityFailed(string node, string activityType, object outputValues)
+        public void ActivityFailed(Guid activityExecutionId, string node, string activityType, object outputValues)
         {
         }
 
-        public void ActivityCorrupted(string node, string activityType)
+        public void ActivityCorrupted(Guid activityExecutionId, string node, string activityType)
         {
         }
     }
@@ -42,15 +42,19 @@ namespace Inceptum.Workflow
         private readonly INodesResolver<TContext> m_Nodes;
         private readonly Execution<TContext> m_Execution;
         private readonly TContext m_Context;
-        private bool m_Resuming = false;
         private readonly object m_Closure;
         private readonly IExecutionObserver m_ExecutionObserver;
+        private ActivityExecution m_ResumingActivityExecution;
 
-        public WorkflowExecutor(Execution<TContext> execution, TContext context, INodesResolver<TContext> nodes, IActivityFactory factory, IExecutionObserver observer,object closure)
+        public WorkflowExecutor(Execution<TContext> execution, TContext context, INodesResolver<TContext> nodes, IActivityFactory factory, IExecutionObserver observer, ActivityExecution resumingActivityExecution, object closure)
             :this(execution,context,nodes,factory,observer)
         {
-            m_Resuming = true;
+            if (!m_Execution.ExecutingActivities.Contains(resumingActivityExecution))
+                throw new ArgumentException("resumingActivityExecution does not belong to provided execution ", "resumingActivityExecution");
+            m_ResumingActivityExecution = resumingActivityExecution;
+            
             m_Closure = closure;
+
         }
 
         public WorkflowExecutor(Execution<TContext> execution, TContext context, INodesResolver<TContext> nodes, IActivityFactory factory,   IExecutionObserver observer)
@@ -62,17 +66,25 @@ namespace Inceptum.Workflow
             m_Nodes = nodes;
         }
 
+
         public WorkflowState Visit(IGraphNode<TContext> node)
         {
             object activityOutput = null;
             ActivityResult result;
-            m_Execution.ActiveNode = node.Name;
+            ActivityExecution activityExecution;
+            if (m_ResumingActivityExecution != null)
+            {
+                activityExecution = m_ResumingActivityExecution;
+                result = node.ActivitySlot.Resume(activityExecution.Id,m_Factory, m_Context, m_Closure, out activityOutput);
+                m_ResumingActivityExecution = null;
+            }
+            else
+            {
+                activityExecution = new ActivityExecution(node.Name);
+                m_Execution.ExecutingActivities.Add(activityExecution);
+                result = node.ActivitySlot.Execute(activityExecution.Id,m_Factory, m_Context, out activityOutput, activityInput => m_ExecutionObserver.ActivityStarted(activityExecution.Id, node.Name, node.ActivityType, activityInput));
+            }
 
-            result = m_Resuming 
-                ? node.ActivitySlot.Resume(m_Factory, m_Context, m_Closure, out activityOutput) 
-                : node.ActivitySlot.Execute(m_Factory, m_Context, out activityOutput, activityInput => m_ExecutionObserver.ActivityStarted(node.Name, node.ActivityType, activityInput));
-
-            m_Resuming = false;
 
             if (result == ActivityResult.Pending)
             {
@@ -83,18 +95,20 @@ namespace Inceptum.Workflow
             if (result == ActivityResult.None)
             {
                 m_Execution.State = WorkflowState.Corrupted;
-                m_ExecutionObserver.ActivityCorrupted(node.Name, node.ActivityType);
+                m_ExecutionObserver.ActivityCorrupted(activityExecution.Id, node.Name, node.ActivityType);
                 return WorkflowState.Corrupted;
             }
 
             if (result == ActivityResult.Failed)
             {
-                m_ExecutionObserver.ActivityFailed(node.Name, node.ActivityType, activityOutput);
+                m_ExecutionObserver.ActivityFailed(activityExecution.Id, node.Name, node.ActivityType, activityOutput);
+                m_Execution.ExecutingActivities.Remove(activityExecution);
             }
 
             if (result == ActivityResult.Succeeded)
             {
-                m_ExecutionObserver.ActivityFinished(node.Name, node.ActivityType, activityOutput);
+                m_ExecutionObserver.ActivityFinished(activityExecution.Id, node.Name, node.ActivityType, activityOutput);
+                m_Execution.ExecutingActivities.Remove(activityExecution);
             }
 
             var edges = node.Edges.Where(e => e.Condition(m_Context, result)).ToArray();

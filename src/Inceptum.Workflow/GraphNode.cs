@@ -6,8 +6,8 @@ namespace Inceptum.Workflow
     interface IActivitySlot<TContext>
     {
         string ActivityType { get; }
-        ActivityResult Execute(IActivityFactory factory, TContext context, out object activityOutput, Action<object> beforeExecute);
-        ActivityResult Resume<TClosure>(IActivityFactory factory, TContext context, TClosure closure, out object activityOutput);
+        ActivityResult Execute(Guid activityExecutionId, IActivityFactory factory, TContext context, out object activityOutput, Action<object> beforeExecute);
+        ActivityResult Resume<TClosure>(Guid activityExecutionId, IActivityFactory factory, TContext context, TClosure closure, out object activityOutput);
     }
 
     public interface IActivitySlot<TContext, TInput, TOutput, TFailOutput> : IHideObjectMembers
@@ -31,14 +31,14 @@ namespace Inceptum.Workflow
             get { return m_ActivityType; }
         }
 
-        public ActivityResult Execute(IActivityFactory factory, TContext context, out object activityOutput, Action<object> beforeExecute)
+        public ActivityResult Execute(Guid activityExecutionId, IActivityFactory factory, TContext context, out object activityOutput, Action<object> beforeExecute)
         {
             beforeExecute(null);
             activityOutput = null;
             return ActivityResult.Succeeded;
         }
 
-        public ActivityResult Resume<TClosure>(IActivityFactory factory, TContext context, TClosure closure, out object activityOutput)
+        public ActivityResult Resume<TClosure>(Guid activityExecutionId, IActivityFactory factory, TContext context, TClosure closure, out object activityOutput)
         {
             activityOutput = null;
             return ActivityResult.Succeeded;
@@ -79,7 +79,7 @@ namespace Inceptum.Workflow
             get; private set;
         }
 
-        public ActivityResult Execute(IActivityFactory factory, TContext context, out object activityOutput, Action<object> beforeExecute)
+        public ActivityResult Execute(Guid activityExecutionId, IActivityFactory factory, TContext context, out object activityOutput, Action<object> beforeExecute)
         {
             IActivity<TInput, TOutput, TFailOutput> activity=null;
             try
@@ -88,7 +88,7 @@ namespace Inceptum.Workflow
                 object actout = null;
                 var activityInput = m_GetActivityInput(context);
                 beforeExecute(activity.IsInputSerializable?activityInput:null);
-                var result = activity.Execute(activityInput, output =>
+                var result = activity.Execute(activityExecutionId,activityInput, output =>
                 {
                     actout = output;
                     m_ProcessOutput(context, output);
@@ -107,11 +107,11 @@ namespace Inceptum.Workflow
             }
         }
 
-        public ActivityResult Resume<TClosure>(IActivityFactory factory, TContext context, TClosure closure, out object activityOutput)
+        public ActivityResult Resume<TClosure>(Guid activityExecutionId, IActivityFactory factory, TContext context, TClosure closure, out object activityOutput)
         {
             var activity = m_ActivityCreation(factory);
             object actout = null;
-            var result = activity.Resume(output =>
+            var result = activity.Resume(activityExecutionId,output =>
             {
                 actout = output;
                 m_ProcessOutput(context, output);

@@ -28,7 +28,7 @@ namespace Inceptum.Workflow.Tests
 
         private class FailingTestActivity : TestActivity
         {
-            public override ActivityResult Execute(List<string> input, Action<List<string>> processOutput, Action<List<string>> processFailOutput)
+            public override ActivityResult Execute(Guid activityExecutionId, List<string> input, Action<List<string>> processOutput, Action<List<string>> processFailOutput)
             {
                 return ActivityResult.Failed;
             }
@@ -36,12 +36,12 @@ namespace Inceptum.Workflow.Tests
 
         private class AsyncTestActivity : TestActivity
         {
-            public override ActivityResult Execute(List<string> input, Action<List<string>> processOutput, Action<List<string>> processFailOutput)
+            public override ActivityResult Execute(Guid activityExecutionId, List<string> input, Action<List<string>> processOutput, Action<List<string>> processFailOutput)
             {
                 return ActivityResult.Pending;
             }
-            
-            public override ActivityResult Resume<TClosure>(Action<List<string>> processOutput, Action<List<string>> processFailOutput, TClosure closure)
+
+            public override ActivityResult Resume<TClosure>(Guid activityExecutionId, Action<List<string>> processOutput, Action<List<string>> processFailOutput, TClosure closure)
             {
                 return ActivityResult.Succeeded;
             }
@@ -57,7 +57,7 @@ namespace Inceptum.Workflow.Tests
                 return ActivityResult.Succeeded;
             }
 
-            public override ActivityResult Execute(List<string> input, Action<List<string>> processOutput, Action<List<string>> processFailOutput)
+            public override ActivityResult Execute(Guid activityExecutionId, List<string> input, Action<List<string>> processOutput, Action<List<string>> processFailOutput)
             {
                 processOutput(new List<string>(input.ToArray().Reverse().ToArray()));
                 return ActivityResult.Succeeded;
@@ -303,8 +303,12 @@ namespace Inceptum.Workflow.Tests
             var execution = wf.Run(wfContext);
             Assert.That(execution.State, Is.EqualTo(WorkflowState.InProgress), "Execution was not paused when async activity returned Pednding status");
             Assert.That(wfContext, Is.EquivalentTo(new[] {"TestActivity1", "AsyncTestActivity"}), "Wrong activities were executed");
-
-            execution = wf.Resume(wfContext, new {message = "йа - кложурка!!!"});
+            Assert.That(execution.ExecutingActivities.Count, Is.EqualTo(1), "execution does not store paused activity info");
+            Assert.That(execution.ExecutingActivities.First().Node, Is.EqualTo("node2"), "execution stores paused activity info with wrong node name");
+/*
+            execution.ExecutingActivities.Single(e=>e.Node==)
+*/
+            execution = wf.Resume(wfContext,execution.ExecutingActivities.First().Id, new {message = "йа - кложурка!!!"});
             Assert.That(execution.State, Is.EqualTo(WorkflowState.Complete),
                 "Execution was not complete after async activity was successfully resumed and returned Succeeded status");
             Assert.That(wfContext, Is.EquivalentTo(new[] {"TestActivity1", "AsyncTestActivity", "TestActivity3"}), "Wrong activities were executed");
@@ -419,24 +423,24 @@ namespace Inceptum.Workflow.Tests
             get { return m_State; }
         }
 
-        public void ActivityStarted(string node, string activityType, object inputValues)
+        public void ActivityStarted(Guid activityExecutionId, string node, string activityType, object inputValues)
         {
             State.Add(node, "started");
         }
 
-        public void ActivityFinished(string node, string activityType, object outputValues)
+        public void ActivityFinished(Guid activityExecutionId, string node, string activityType, object outputValues)
         {
             if(!State.ContainsKey(node)) throw new Exception(string.Format("Trying to finish not started node {0}", node));
             State[node] = "finished";
         }
 
-        public void ActivityFailed(string node, string activityType, object outputValues)
+        public void ActivityFailed(Guid activityExecutionId, string node, string activityType, object outputValues)
         {
             if (!State.ContainsKey(node)) throw new Exception(string.Format("Trying to fail not started node {0}", node));
             State[node] = "failed";
         }
 
-        public void ActivityCorrupted(string node, string activityType)
+        public void ActivityCorrupted(Guid activityExecutionId, string node, string activityType)
         {
             if (!State.ContainsKey(node)) throw new Exception(string.Format("Trying to corrupt not started node {0}", node));
             State[node] = "corrupted";
