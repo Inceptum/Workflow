@@ -1,7 +1,7 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-
+  
 
 [assembly: AssemblyCompany("InceptumSoft")]
 [assembly: AssemblyProduct("Inceptum.Workflow")]
