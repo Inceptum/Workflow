@@ -7,10 +7,17 @@ namespace Inceptum.Workflow
     {
         public Guid Id { get; private set; }
         public string Node { get; private set; }
-        public ActivityExecution(string node)
+
+        public ActivityExecution(string node, Guid id)
         {
-            Id = Guid.NewGuid();
+            Id = id;
             Node = node;
+        }
+
+        public ActivityExecution(string node)
+            : this(node, Guid.NewGuid())
+        {
+            
         }
     }
 
