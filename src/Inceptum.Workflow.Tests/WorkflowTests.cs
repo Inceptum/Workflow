@@ -8,6 +8,7 @@ using Inceptum.Workflow;
 using Inceptum.Workflow.Fluent;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
+using Rhino.Mocks;
 
 namespace Inceptum.Workflow.Tests
 {
@@ -152,7 +153,26 @@ namespace Inceptum.Workflow.Tests
             Assert.That(execution.State, Is.EqualTo(WorkflowState.Complete));
             Assert.That(wfContext, Is.EquivalentTo(new[] {"TestActivity1", "TestActivity2"}), "Wrong activities were executed");
         }
-     
+
+        [Test]
+        public void ProcessInputFailureTest()
+        {
+            var observer = MockRepository.GenerateMock<IExecutionObserver>();
+            observer.Expect(
+                o =>
+                    o.ActivityStarted(Arg<Guid>.Is.Anything, Arg<string>.Is.Equal("node1"),
+                        Arg<string>.Is.Equal("TestActivity1"), Arg<object>.Is.Anything));
+            var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>(), null, observer);
+            wf.Configure(cfg => cfg.Do("node1").Do("node2").End());
+            wf.Node<TestActivity1>("node1").WithInput(list => { throw new Exception("FAIL!!!");}).ProcessOutput((context, output) => context.Add("TestActivity1"));
+            wf.Node<TestActivity2>("node2").WithInput(list => list).ProcessOutput((context, output) => context.Add("TestActivity2"));
+         
+            var wfContext = new List<string>();
+            var execution = wf.Run(wfContext);
+            observer.VerifyAllExpectations();
+        }
+
+ 
         [Test]
         public void WorkflowCorruptsOnActivityFailWithoutExplicitFailBranchTest()
         {

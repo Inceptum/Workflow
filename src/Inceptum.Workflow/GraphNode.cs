@@ -86,8 +86,17 @@ namespace Inceptum.Workflow
             {
                 activity = m_ActivityCreation(factory);
                 object actout = null;
-                var activityInput = m_GetActivityInput(context);
-                beforeExecute(activity.IsInputSerializable?activityInput:null);
+
+                TInput activityInput=null;
+                try
+                {
+                    activityInput = m_GetActivityInput(context);
+                    beforeExecute(activity.IsInputSerializable ? activityInput : null);
+                }
+                catch (Exception e)
+                {
+                    beforeExecute("Failed to get activity  input: "+e.ToString());
+                }
                 var result = activity.Execute(activityExecutionId,activityInput, output =>
                 {
                     actout = output;
