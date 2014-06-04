@@ -96,6 +96,7 @@ namespace Inceptum.Workflow
                 catch (Exception e)
                 {
                     beforeExecute("Failed to get activity  input: "+e.ToString());
+                    throw;
                 }
                 var result = activity.Execute(activityExecutionId,activityInput, output =>
                 {
