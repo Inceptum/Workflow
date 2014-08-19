@@ -376,6 +376,30 @@ namespace Inceptum.Workflow.Tests
             Assert.That(execution.State, Is.EqualTo(WorkflowState.Complete), "Execution was not complete after async activity was successfully resumed and returned Succeeded status");
             Assert.That(wfContext, Is.EquivalentTo(new[] {"1", "77", "4"}), "Wrong activities were executed");
         }
+
+        [Test]
+        public void ResumeFromWithInputProviderTest()
+        {
+            var inputProvider = MockRepository.GenerateMock<IActivityInputProvider>();
+            inputProvider.Expect(p => p.GetInput<List<string>>()).Return(new[] {"77"}.ToList());
+            var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>());
+            wf.Configure(cfg => cfg.Do("node1").Do("node2").Do("node3").Do("node4").End());
+            
+
+            wf.Node<TestActivity1>("node1").WithInput(list => new List<string>(new[]{"1"})).ProcessOutput((context, output) => context.AddRange(output));
+            wf.Node<AsyncTestActivity>("node2").WithInput(list => new List<string>(new[]{"2"})).ProcessOutput((context, output) => context.AddRange(output));
+            wf.Node<TestActivity3>("node3").WithInput(list => new List<string>(new[]{"3"})).ProcessOutput((context, output) => context.AddRange(output));
+            wf.Node<TestActivity2>("node4").WithInput(list => new List<string>(new[]{"4"})).ProcessOutput((context, output) => context.AddRange(output));
+
+            var wfContext = new List<string>();
+            var execution = wf.Run(wfContext);
+            Assert.That(execution.State, Is.EqualTo(WorkflowState.InProgress), "Execution was not paused when async activity returned Pednding status");
+            Assert.That(wfContext, Is.EquivalentTo(new[] {"1"}), "Wrong activities were executed");
+
+            execution = wf.ResumeFrom(wfContext, "node3", inputProvider);
+            Assert.That(execution.State, Is.EqualTo(WorkflowState.Complete), "Execution was not complete after async activity was successfully resumed and returned Succeeded status");
+            Assert.That(wfContext, Is.EquivalentTo(new[] {"1", "77", "4"}), "Wrong activities were executed");
+        }
 /*
         [Test]
         public void GenericActivityTest()

@@ -6,7 +6,7 @@ namespace Inceptum.Workflow
     interface IActivitySlot<TContext>
     {
         string ActivityType { get; }
-        ActivityResult Execute(Guid activityExecutionId, IActivityFactory factory, TContext context, object input, out object activityOutput, Action<object> beforeExecute);
+        ActivityResult Execute(Guid activityExecutionId, IActivityFactory factory, TContext context, IActivityInputProvider inputProvider, out object activityOutput, Action<object> beforeExecute);
         ActivityResult Resume<TClosure>(Guid activityExecutionId, IActivityFactory factory, TContext context, TClosure closure, out object activityOutput);
     }
 
@@ -31,10 +31,10 @@ namespace Inceptum.Workflow
             get { return m_ActivityType; }
         }
 
-        public ActivityResult Execute(Guid activityExecutionId, IActivityFactory factory, TContext context, object input, out object activityOutput, Action<object> beforeExecute)
+        public ActivityResult Execute(Guid activityExecutionId, IActivityFactory factory, TContext context, IActivityInputProvider inputProvider, out object activityOutput, Action<object> beforeExecute)
         {
             
-            beforeExecute(input);
+            beforeExecute(null);
             activityOutput = null;
             return ActivityResult.Succeeded;
         }
@@ -79,7 +79,7 @@ namespace Inceptum.Workflow
             get; private set;
         }
 
-        public ActivityResult Execute(Guid activityExecutionId, IActivityFactory factory, TContext context, object input, out object activityOutput, Action<object> beforeExecute)
+        public ActivityResult Execute(Guid activityExecutionId, IActivityFactory factory, TContext context, IActivityInputProvider inputProvider, out object activityOutput, Action<object> beforeExecute)
         {
             IActivity<TInput, TOutput, TFailOutput> activity=null;
             try
@@ -90,7 +90,10 @@ namespace Inceptum.Workflow
                 TInput activityInput=null;
                 try
                 {
-                    activityInput = (TInput)input ?? m_GetActivityInput(context);
+                    if (inputProvider != null)
+                        activityInput = inputProvider.GetInput<TInput>();
+                    if (activityInput == null)
+                        activityInput = m_GetActivityInput(context);
                     beforeExecute(activity.IsInputSerializable ? activityInput : null);
                 }
                 catch (Exception e)

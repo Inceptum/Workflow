@@ -36,29 +36,133 @@ namespace Inceptum.Workflow
         }
     }
 
-    internal class WorkflowExecutor<TContext> : IWorkflowVisitor<TContext, WorkflowState>
+    internal class WorkflowExecutor<TContext> : WorkflowExecutorBase<TContext>
+    {
+        public WorkflowExecutor(Execution<TContext> execution, TContext context, INodesResolver<TContext> nodes, IActivityFactory factory, IExecutionObserver observer) 
+            : base(execution, context, nodes, factory, observer)
+        {
+        }
+
+        protected override ActivityResult VisitNode(IGraphNode<TContext> node, Guid activityExecutionId, out object activityOutput)
+        {
+            return node.ActivitySlot.Execute(activityExecutionId, Factory, Context, null, out activityOutput, activityInput => ExecutionObserver.ActivityStarted(activityExecutionId, node.Name, node.ActivityType, activityInput));
+        }
+    }
+
+    internal class ResumeWorkflowExecutor<TContext> : WorkflowExecutorBase<TContext>
+    {
+        private readonly object m_Closure;
+        private readonly ActivityExecution m_ResumingActivityExecution;
+
+        public ResumeWorkflowExecutor(Execution<TContext> execution, TContext context, INodesResolver<TContext> nodes, IActivityFactory factory, IExecutionObserver observer, ActivityExecution resumingActivityExecution, object closure) 
+            : base(execution, context, nodes, factory, observer)
+        {
+            m_ResumingActivityExecution = resumingActivityExecution;
+            m_Closure = closure;
+        }
+
+        protected override ActivityExecution GetActivityExecution(IGraphNode<TContext> node)
+        {
+            return m_ResumingActivityExecution;
+        }
+
+        protected override ActivityResult VisitNode(IGraphNode<TContext> node, Guid activityExecutionId, out object activityOutput)
+        {
+            return node.ActivitySlot.Resume(activityExecutionId, Factory, Context, m_Closure, out activityOutput);
+        }
+
+        protected override WorkflowExecutorBase<TContext> GetNextNodeVisitor()
+        {
+            return new WorkflowExecutor<TContext>(Execution,Context,Nodes,Factory,ExecutionObserver);
+        }
+    }
+
+    public interface IActivityInputProvider
+    {
+        TInput GetInput<TInput>();
+    }
+
+    internal class ResumeFromWorkflowExecutor<TContext> : WorkflowExecutorBase<TContext>, IActivityInputProvider
+    {
+        private readonly object m_Input;
+        private IActivityInputProvider m_InputProvider;
+
+        public ResumeFromWorkflowExecutor(Execution<TContext> execution, TContext context, INodesResolver<TContext> nodes, IActivityFactory factory, IExecutionObserver observer) 
+            : base(execution, context, nodes, factory, observer)
+        {
+        }
+        public ResumeFromWorkflowExecutor(Execution<TContext> execution, TContext context, INodesResolver<TContext> nodes, IActivityFactory factory, IExecutionObserver observer
+            , object input) 
+            : base(execution, context, nodes, factory, observer)
+        {
+            m_Input = input;
+        }
+       public ResumeFromWorkflowExecutor(Execution<TContext> execution, TContext context, INodesResolver<TContext> nodes, IActivityFactory factory, IExecutionObserver observer
+            , IActivityInputProvider inputProvider) 
+            : base(execution, context, nodes, factory, observer)
+       {
+           m_InputProvider = inputProvider;
+       }
+
+        T getInput<T>()
+        {
+            return default(T);
+        }
+
+        protected override ActivityResult VisitNode(IGraphNode<TContext> node, Guid activityExecutionId, out object activityOutput)
+        {
+            return node.ActivitySlot.Execute(activityExecutionId, Factory, Context, m_InputProvider??this, out activityOutput, activityInput => ExecutionObserver.ActivityStarted(activityExecutionId, node.Name, node.ActivityType, activityInput));
+        }
+
+        protected override WorkflowExecutorBase<TContext> GetNextNodeVisitor()
+        {
+            return new WorkflowExecutor<TContext>(Execution,Context,Nodes,Factory,ExecutionObserver);
+        }
+
+        public TInput GetInput<TInput>()
+        {
+            return (TInput) m_Input;
+        }
+    }
+
+
+    internal abstract class WorkflowExecutorBase<TContext> : IWorkflowVisitor<TContext, WorkflowState>
     {
         private readonly IActivityFactory m_Factory;
         private readonly INodesResolver<TContext> m_Nodes;
         private readonly Execution<TContext> m_Execution;
         private readonly TContext m_Context;
-        private readonly object m_Closure;
         private readonly IExecutionObserver m_ExecutionObserver;
         private ActivityExecution m_ResumingActivityExecution;
         private ResumeFromActivityExection m_ResumeFromActivityExecution;
 
-        public WorkflowExecutor(Execution<TContext> execution, TContext context, INodesResolver<TContext> nodes, IActivityFactory factory, IExecutionObserver observer, ActivityExecution resumingActivityExecution, object closure)
-            :this(execution,context,nodes,factory,observer)
+        public INodesResolver<TContext> Nodes
         {
-            if (!m_Execution.ExecutingActivities.Contains(resumingActivityExecution))
-                throw new ArgumentException("resumingActivityExecution does not belong to provided execution ", "resumingActivityExecution");
-            m_ResumingActivityExecution = resumingActivityExecution;
-            
-            m_Closure = closure;
-
+            get { return m_Nodes; }
         }
 
-        public WorkflowExecutor(Execution<TContext> execution, TContext context, INodesResolver<TContext> nodes, IActivityFactory factory,   IExecutionObserver observer)
+        protected IExecutionObserver ExecutionObserver
+        {
+            get { return m_ExecutionObserver; }
+        }
+
+        protected IActivityFactory Factory
+        {
+            get { return m_Factory; }
+        }
+
+        protected TContext Context
+        {
+            get { return m_Context; }
+        }
+
+        protected Execution<TContext> Execution
+        {
+            get { return m_Execution; }
+        }
+
+
+        protected WorkflowExecutorBase(Execution<TContext> execution, TContext context, INodesResolver<TContext> nodes, IActivityFactory factory,   IExecutionObserver observer)
         {
             m_ExecutionObserver = observer??new NullExecutionObserver();
             m_Context = context;
@@ -66,45 +170,25 @@ namespace Inceptum.Workflow
             m_Execution = execution;
             m_Nodes = nodes;
         }
+ 
 
-        public WorkflowExecutor(Execution<TContext> execution, TContext context, Workflow<TContext> nodes, IActivityFactory factory, IExecutionObserver observer, ResumeFromActivityExection resumeFromActivityExecution)
-            :this(execution,context,nodes,factory,observer)
+        protected abstract ActivityResult VisitNode(IGraphNode<TContext> node, Guid activityExecutionId, out  object activityOutput);
+
+        protected virtual ActivityExecution GetActivityExecution(IGraphNode<TContext> node)
         {
-            m_ResumeFromActivityExecution = resumeFromActivityExecution;
+            var activityExecution = new ActivityExecution(node.Name);
+            Execution.ExecutingActivities.Clear();
+            Execution.ExecutingActivities.Add(activityExecution);
+            return activityExecution;
         }
-
 
         public WorkflowState Visit(IGraphNode<TContext> node)
         {
-            object activityOutput = null;
-            ActivityResult result;
-            ActivityExecution activityExecution;
-            if (m_ResumingActivityExecution != null)
-            {
-                activityExecution = m_ResumingActivityExecution;
-                result = node.ActivitySlot.Resume(activityExecution.Id,m_Factory, m_Context, m_Closure, out activityOutput);
-                m_ResumingActivityExecution = null;
-            }
-            else
-            {
-                object input = null;
-                if (m_ResumeFromActivityExecution != null)
-                {
-                    input = m_ResumeFromActivityExecution.Input;
-                    m_ResumeFromActivityExecution = null;
-                }
-                //TODO[MT]: may be we should create GetActivityInput method and call it from here?
-                //else
-                //{
-                //    input = node.ActivitySlot.GetActivityInput(m_Context);
-                //}
+            object activityOutput;
+            var activityExecution = GetActivityExecution(node);
 
-                activityExecution = new ActivityExecution(node.Name);
-                m_Execution.ExecutingActivities.Clear(); // TODO[MT]: call m_ExecutionObserver.ExecutionCanceled(...) for all currently executing activities
-                m_Execution.ExecutingActivities.Add(activityExecution);
-                result = node.ActivitySlot.Execute(activityExecution.Id, m_Factory, m_Context, input, out activityOutput, activityInput => m_ExecutionObserver.ActivityStarted(activityExecution.Id, node.Name, node.ActivityType, activityInput));
-            }
-
+            var result = VisitNode(node,activityExecution.Id, out  activityOutput);
+ 
             if (result == ActivityResult.Pending)
             {
                 m_Execution.State = WorkflowState.InProgress;
@@ -149,7 +233,7 @@ namespace Inceptum.Workflow
             if (transition != null)
             {
                 var nextNode = m_Nodes[transition.Node];
-                var nextResult = nextNode.Accept(this);
+                var nextResult = nextNode.Accept(GetNextNodeVisitor());
                 return nextResult;
             }
 
@@ -169,6 +253,11 @@ namespace Inceptum.Workflow
 
             m_Execution.State = WorkflowState.Corrupted;
             return WorkflowState.Corrupted;
+        }
+
+        protected virtual WorkflowExecutorBase<TContext> GetNextNodeVisitor()
+        {
+            return this;
         }
     }
 }

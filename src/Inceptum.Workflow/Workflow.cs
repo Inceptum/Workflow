@@ -141,7 +141,7 @@ namespace Inceptum.Workflow
             }
             else
             {
-                var executor = new WorkflowExecutor<TContext>(execution, context, this, m_ActivityFactory, m_ExecutionObserver, activityExecution, closure);
+                var executor = new ResumeWorkflowExecutor<TContext>(execution, context, this, m_ActivityFactory, m_ExecutionObserver, activityExecution, closure);
                 try
                 {
                     string node = activityExecution.Node;
@@ -157,10 +157,27 @@ namespace Inceptum.Workflow
             return execution;
         }
 
+        public virtual Execution<TContext> ResumeFrom(TContext context, string node, IActivityInputProvider inputProvider)
+        {
+            var execution = m_Persister.Load(context);
+            var executor = new ResumeFromWorkflowExecutor<TContext>(execution, context, this, m_ActivityFactory, m_ExecutionObserver, inputProvider);
+            try
+            {
+                accept(executor, node);
+            }
+            catch (Exception e)
+            {
+                execution.Error = e.ToString();
+                execution.State = WorkflowState.Corrupted;
+            }
+            m_Persister.Save(context, execution);
+            return execution;
+        }
+
         public virtual Execution<TContext> ResumeFrom(TContext context, string node, object input = null)
         {
             var execution = m_Persister.Load(context);
-            var executor = new WorkflowExecutor<TContext>(execution, context, this, m_ActivityFactory,  m_ExecutionObserver, new ResumeFromActivityExection(node, input));
+            var executor = new ResumeFromWorkflowExecutor<TContext>(execution, context, this, m_ActivityFactory, m_ExecutionObserver, input);
             try
             {
                 accept(executor, node);
