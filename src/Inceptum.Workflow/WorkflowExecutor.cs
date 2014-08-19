@@ -85,30 +85,21 @@ namespace Inceptum.Workflow
     internal class ResumeFromWorkflowExecutor<TContext> : WorkflowExecutorBase<TContext>, IActivityInputProvider
     {
         private readonly object m_Input;
-        private IActivityInputProvider m_InputProvider;
+        private readonly IActivityInputProvider m_InputProvider;
 
-        public ResumeFromWorkflowExecutor(Execution<TContext> execution, TContext context, INodesResolver<TContext> nodes, IActivityFactory factory, IExecutionObserver observer) 
-            : base(execution, context, nodes, factory, observer)
-        {
-        }
-        public ResumeFromWorkflowExecutor(Execution<TContext> execution, TContext context, INodesResolver<TContext> nodes, IActivityFactory factory, IExecutionObserver observer
-            , object input) 
+           
+        public ResumeFromWorkflowExecutor(Execution<TContext> execution, TContext context, INodesResolver<TContext> nodes, IActivityFactory factory, IExecutionObserver observer, object input) 
             : base(execution, context, nodes, factory, observer)
         {
             m_Input = input;
         }
-       public ResumeFromWorkflowExecutor(Execution<TContext> execution, TContext context, INodesResolver<TContext> nodes, IActivityFactory factory, IExecutionObserver observer
-            , IActivityInputProvider inputProvider) 
+
+        public ResumeFromWorkflowExecutor(Execution<TContext> execution, TContext context, INodesResolver<TContext> nodes, IActivityFactory factory, IExecutionObserver observer, IActivityInputProvider inputProvider)
             : base(execution, context, nodes, factory, observer)
-       {
-           m_InputProvider = inputProvider;
-       }
-
-        T getInput<T>()
         {
-            return default(T);
+            m_InputProvider = inputProvider;
         }
-
+ 
         protected override ActivityResult VisitNode(IGraphNode<TContext> node, Guid activityExecutionId, out object activityOutput)
         {
             return node.ActivitySlot.Execute(activityExecutionId, Factory, Context, m_InputProvider??this, out activityOutput, activityInput => ExecutionObserver.ActivityStarted(activityExecutionId, node.Name, node.ActivityType, activityInput));
@@ -133,10 +124,8 @@ namespace Inceptum.Workflow
         private readonly Execution<TContext> m_Execution;
         private readonly TContext m_Context;
         private readonly IExecutionObserver m_ExecutionObserver;
-        private ActivityExecution m_ResumingActivityExecution;
-        private ResumeFromActivityExection m_ResumeFromActivityExecution;
 
-        public INodesResolver<TContext> Nodes
+        protected INodesResolver<TContext> Nodes
         {
             get { return m_Nodes; }
         }

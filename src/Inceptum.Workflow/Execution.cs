@@ -3,25 +3,7 @@ using System.Collections.Generic;
 
 namespace Inceptum.Workflow
 {
-    public class ResumeFromActivityExection:ActivityExecution
-    {
-        private readonly object m_Input;
-
-        public ResumeFromActivityExection(string node, Guid id, object input) : base(node, id)
-        {
-            m_Input = input;
-        }
-
-        public ResumeFromActivityExection(string node, object input) : base(node)
-        {
-            m_Input = input;
-        }
-
-        public object Input
-        {
-            get { return m_Input; }
-        }
-    }
+    
 
     public class ActivityExecution
     {
