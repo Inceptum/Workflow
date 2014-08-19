@@ -45,6 +45,7 @@ namespace Inceptum.Workflow
         private readonly object m_Closure;
         private readonly IExecutionObserver m_ExecutionObserver;
         private ActivityExecution m_ResumingActivityExecution;
+        private ResumeFromActivityExection m_ResumeFromActivityExecution;
 
         public WorkflowExecutor(Execution<TContext> execution, TContext context, INodesResolver<TContext> nodes, IActivityFactory factory, IExecutionObserver observer, ActivityExecution resumingActivityExecution, object closure)
             :this(execution,context,nodes,factory,observer)
@@ -66,6 +67,12 @@ namespace Inceptum.Workflow
             m_Nodes = nodes;
         }
 
+        public WorkflowExecutor(Execution<TContext> execution, TContext context, Workflow<TContext> nodes, IActivityFactory factory, IExecutionObserver observer, ResumeFromActivityExection resumeFromActivityExecution)
+            :this(execution,context,nodes,factory,observer)
+        {
+            m_ResumeFromActivityExecution = resumeFromActivityExecution;
+        }
+
 
         public WorkflowState Visit(IGraphNode<TContext> node)
         {
@@ -80,11 +87,23 @@ namespace Inceptum.Workflow
             }
             else
             {
-                activityExecution = new ActivityExecution(node.Name);
-                m_Execution.ExecutingActivities.Add(activityExecution);
-                result = node.ActivitySlot.Execute(activityExecution.Id,m_Factory, m_Context, out activityOutput, activityInput => m_ExecutionObserver.ActivityStarted(activityExecution.Id, node.Name, node.ActivityType, activityInput));
-            }
+                object input = null;
+                if (m_ResumeFromActivityExecution != null)
+                {
+                    input = m_ResumeFromActivityExecution.Input;
+                    m_ResumeFromActivityExecution = null;
+                }
+                //TODO[MT]: may be we should create GetActivityInput method and call it from here?
+                //else
+                //{
+                //    input = node.ActivitySlot.GetActivityInput(m_Context);
+                //}
 
+                activityExecution = new ActivityExecution(node.Name);
+                m_Execution.ExecutingActivities.Clear(); // TODO[MT]: call m_ExecutionObserver.ExecutionCanceled(...) for all currently executing activities
+                m_Execution.ExecutingActivities.Add(activityExecution);
+                result = node.ActivitySlot.Execute(activityExecution.Id, m_Factory, m_Context, input, out activityOutput, activityInput => m_ExecutionObserver.ActivityStarted(activityExecution.Id, node.Name, node.ActivityType, activityInput));
+            }
 
             if (result == ActivityResult.Pending)
             {

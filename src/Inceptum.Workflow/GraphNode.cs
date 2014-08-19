@@ -6,7 +6,7 @@ namespace Inceptum.Workflow
     interface IActivitySlot<TContext>
     {
         string ActivityType { get; }
-        ActivityResult Execute(Guid activityExecutionId, IActivityFactory factory, TContext context, out object activityOutput, Action<object> beforeExecute);
+        ActivityResult Execute(Guid activityExecutionId, IActivityFactory factory, TContext context, object input, out object activityOutput, Action<object> beforeExecute);
         ActivityResult Resume<TClosure>(Guid activityExecutionId, IActivityFactory factory, TContext context, TClosure closure, out object activityOutput);
     }
 
@@ -31,9 +31,10 @@ namespace Inceptum.Workflow
             get { return m_ActivityType; }
         }
 
-        public ActivityResult Execute(Guid activityExecutionId, IActivityFactory factory, TContext context, out object activityOutput, Action<object> beforeExecute)
+        public ActivityResult Execute(Guid activityExecutionId, IActivityFactory factory, TContext context, object input, out object activityOutput, Action<object> beforeExecute)
         {
-            beforeExecute(null);
+            
+            beforeExecute(input);
             activityOutput = null;
             return ActivityResult.Succeeded;
         }
@@ -43,7 +44,6 @@ namespace Inceptum.Workflow
             activityOutput = null;
             return ActivityResult.Succeeded;
         }
-
     }
 
     internal class ActivitySlot<TContext, TInput, TOutput, TFailOutput> : IActivitySlot<TContext>, IActivitySlot<TContext, TInput, TOutput, TFailOutput>
@@ -79,7 +79,7 @@ namespace Inceptum.Workflow
             get; private set;
         }
 
-        public ActivityResult Execute(Guid activityExecutionId, IActivityFactory factory, TContext context, out object activityOutput, Action<object> beforeExecute)
+        public ActivityResult Execute(Guid activityExecutionId, IActivityFactory factory, TContext context, object input, out object activityOutput, Action<object> beforeExecute)
         {
             IActivity<TInput, TOutput, TFailOutput> activity=null;
             try
@@ -90,7 +90,7 @@ namespace Inceptum.Workflow
                 TInput activityInput=null;
                 try
                 {
-                    activityInput = m_GetActivityInput(context);
+                    activityInput = (TInput)input ?? m_GetActivityInput(context);
                     beforeExecute(activity.IsInputSerializable ? activityInput : null);
                 }
                 catch (Exception e)
@@ -136,15 +136,12 @@ namespace Inceptum.Workflow
         
         }
     }
-     
-
-
 
     internal class GraphNode<TContext> : IGraphNode<TContext>
     {
         private IActivitySlot<TContext> m_ActivitySlot;
         private readonly List<GraphEdge<TContext>> m_Constraints = new List<GraphEdge<TContext>>();
-        
+
         public string Name { get; private set; }
 
         public string ActivityType
@@ -159,7 +156,7 @@ namespace Inceptum.Workflow
         {
             get { return m_ActivitySlot; }
         }
- 
+
         public GraphNode(string name)
         {
             Name = name;
