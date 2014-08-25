@@ -55,6 +55,14 @@
     <Compile Include="EmptyActivity.cs" />
     <Compile Include="EndActivity.cs" />
     <Compile Include="Execution.cs" />
+    <Compile Include="ActivityState.cs" />
+    <Compile Include="IActivityInputProvider.cs" />
+    <Compile Include="IActivityOutputProvider.cs" />
+    <Compile Include="NullExecutionObserver.cs" />
+    <Compile Include="Executors\ResumeAfterWorkflowExecutor.cs" />
+    <Compile Include="Executors\ResumeFromWorkflowExecutor.cs" />
+    <Compile Include="Executors\ResumeWorkflowExecutor.cs" />
+    <Compile Include="Executors\WorkflowExecutorBase.cs" />
     <Compile Include="Fluent\EdgeDescriptor.cs" />
     <Compile Include="Fluent\WorkflowConfigExtensions.cs" />
     <Compile Include="Fluent\WorkflowConfiguration.cs" />
@@ -66,7 +74,7 @@
     <Compile Include="GraphNode.cs" />
     <Compile Include="IHideObjectMembers.cs" />
     <Compile Include="IWorkflowPersister.cs" />
-    <Compile Include="WorkflowExecutor.cs" />
+    <Compile Include="Executors\WorkflowExecutor.cs" />
     <Compile Include="Workflow.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="YumlClassGenerator.cs" />

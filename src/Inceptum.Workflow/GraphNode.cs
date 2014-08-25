@@ -8,6 +8,7 @@ namespace Inceptum.Workflow
         string ActivityType { get; }
         ActivityResult Execute(Guid activityExecutionId, IActivityFactory factory, TContext context, IActivityInputProvider inputProvider, out object activityOutput, Action<object> beforeExecute);
         ActivityResult Resume<TClosure>(Guid activityExecutionId, IActivityFactory factory, TContext context, TClosure closure, out object activityOutput);
+        ActivityResult Complete(Guid activityExecutionId, IActivityFactory factory, TContext context, IActivityOutputProvider outputProvider, out object activityOutput);
     }
 
     public interface IActivitySlot<TContext, TInput, TOutput, TFailOutput> : IHideObjectMembers
@@ -40,6 +41,13 @@ namespace Inceptum.Workflow
         }
 
         public ActivityResult Resume<TClosure>(Guid activityExecutionId, IActivityFactory factory, TContext context, TClosure closure, out object activityOutput)
+        {
+            activityOutput = null;
+            return ActivityResult.Succeeded;
+        }
+
+        public ActivityResult Complete(Guid activityExecutionId, IActivityFactory factory, TContext context,
+                                                 IActivityOutputProvider outputProvider, out object activityOutput)
         {
             activityOutput = null;
             return ActivityResult.Succeeded;
@@ -122,21 +130,44 @@ namespace Inceptum.Workflow
 
         public ActivityResult Resume<TClosure>(Guid activityExecutionId, IActivityFactory factory, TContext context, TClosure closure, out object activityOutput)
         {
-            var activity = m_ActivityCreation(factory);
-            object actout = null;
-            var result = activity.Resume(activityExecutionId,output =>
+            IActivity<TInput, TOutput, TFailOutput> activity = null;
+            try
             {
-                actout = output;
-                m_ProcessOutput(context, output);
-            }, output =>
+                activity = m_ActivityCreation(factory);
+
+                object actout = null;
+                var result = activity.Resume(
+                    activityExecutionId,
+                    output =>
+                        {
+                            actout = output;
+                            m_ProcessOutput(context, output);
+                        },
+                    output =>
+                        {
+                            actout = output;
+                            m_ProcessFailOutput(context, output);
+                        },
+                    closure);
+                activityOutput = actout;
+                return result;
+            }
+            finally
             {
-                actout = output;
-                m_ProcessFailOutput(context, output);
-            },
-            closure);
-            activityOutput = actout;
-            return result;
-        
+                if (activity != null)
+                    factory.Release(activity);
+            }
+        }
+
+        public ActivityResult Complete(Guid activityExecutionId, IActivityFactory factory, TContext context,
+                                       IActivityOutputProvider outputProvider, out object activityOutput)
+        {
+            var output = outputProvider.GetOuput<TOutput>();
+            
+            m_ProcessOutput(context, output);
+            activityOutput = output;
+
+            return ActivityResult.Succeeded;
         }
     }
 

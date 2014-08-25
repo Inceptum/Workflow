@@ -381,7 +381,7 @@ namespace Inceptum.Workflow.Tests
         public void ResumeFromWithInputProviderTest()
         {
             var inputProvider = MockRepository.GenerateMock<IActivityInputProvider>();
-            inputProvider.Expect(p => p.GetInput<List<string>>()).Return(new[] {"77"}.ToList());
+            inputProvider.Expect(p => p.GetInput<List<string>>()).Repeat.Once().Return(new[] {"77"}.ToList());
             var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>());
             wf.Configure(cfg => cfg.Do("node1").Do("node2").Do("node3").Do("node4").End());
             
@@ -399,6 +399,35 @@ namespace Inceptum.Workflow.Tests
             execution = wf.ResumeFrom(wfContext, "node3", inputProvider);
             Assert.That(execution.State, Is.EqualTo(WorkflowState.Complete), "Execution was not complete after async activity was successfully resumed and returned Succeeded status");
             Assert.That(wfContext, Is.EquivalentTo(new[] {"1", "77", "4"}), "Wrong activities were executed");
+        }
+
+        [Test]
+        public void ResumeAfterWithOutputProviderTest()
+        {
+            var outputProvider = MockRepository.GenerateMock<IActivityOutputProvider>();
+            outputProvider.Expect(p => p.GetOuput<List<string>>()).Repeat.Once().Return(new[] {"77"}.ToList());
+            var inMemoryPersister = new InMemoryPersister<List<string>>();
+            var wf = new Workflow<List<string>>("", inMemoryPersister);
+            wf.Configure(cfg => cfg.Do("node1").Do("node2").Do("node3").Do("node4").End());
+
+            wf.Node<TestActivity1>("node1").WithInput(list => new List<string>(new[]{"1"})).ProcessOutput((context, output) => context.AddRange(output));
+            wf.Node<AsyncTestActivity>("node2").WithInput(list => new List<string>(new[]{"2"})).ProcessOutput((context, output) => context.AddRange(output));
+            wf.Node<TestActivity3>("node3").WithInput(list => new List<string>(new[]{"3"})).ProcessOutput((context, output) => context.AddRange(output));
+            wf.Node<TestActivity2>("node4").WithInput(list => new List<string>(new[]{"4"})).ProcessOutput((context, output) => context.AddRange(output));
+
+            var wfContext = new List<string>();
+            var execution = wf.Run(wfContext);
+            Assert.That(execution.State, Is.EqualTo(WorkflowState.InProgress), "Execution was not paused when async activity returned Pending status");
+            Assert.That(wfContext, Is.EquivalentTo(new[] {"1"}), "Wrong activities were executed");
+            
+            //corrupt workflow
+            wf.Resume(wfContext, Guid.Parse("84424EBE-BB5B-4F35-A80D-F57265F78FF0"), new object());
+            Assert.That(execution.State, Is.EqualTo(WorkflowState.Corrupted), "Execution was not Corrupted");
+
+            //resume with custom output of node2
+            execution = wf.ResumeAfter(wfContext, "node2", outputProvider);
+            Assert.That(execution.State, Is.EqualTo(WorkflowState.Complete), "Execution was not complete after async activity was successfully resumed and returned Succeeded status");
+            Assert.That(wfContext, Is.EquivalentTo(new[] {"1", "77", "3", "4"}), "Wrong activities were executed");
         }
 /*
         [Test]

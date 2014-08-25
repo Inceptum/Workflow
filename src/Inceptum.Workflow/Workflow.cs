@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Configuration;
 using System.Linq;
 using System.Linq.Expressions;
+using Inceptum.Workflow.Executors;
 using Inceptum.Workflow.Fluent;
 
 namespace Inceptum.Workflow
@@ -152,6 +153,23 @@ namespace Inceptum.Workflow
                     execution.Error = e.ToString();
                     execution.State = WorkflowState.Corrupted;
                 }
+            }
+            m_Persister.Save(context, execution);
+            return execution;
+        }
+
+        public virtual Execution<TContext> ResumeAfter(TContext context, string node, IActivityOutputProvider inputProvider)
+        {
+            var execution = m_Persister.Load(context);
+            var executor = new ResumeAfterWorkflowExecutor<TContext>(execution, context, this, m_ActivityFactory, m_ExecutionObserver, inputProvider);
+            try
+            {
+                accept(executor, node);
+            }
+            catch (Exception e)
+            {
+                execution.Error = e.ToString();
+                execution.State = WorkflowState.Corrupted;
             }
             m_Persister.Save(context, execution);
             return execution;
