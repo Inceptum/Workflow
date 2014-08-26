@@ -158,10 +158,10 @@ namespace Inceptum.Workflow
             return execution;
         }
 
-        public virtual Execution<TContext> ResumeAfter(TContext context, string node, IActivityOutputProvider inputProvider)
+        public virtual Execution<TContext> ResumeAfter(TContext context, string node, IActivityOutputProvider outputProvider)
         {
             var execution = m_Persister.Load(context);
-            var executor = new ResumeAfterWorkflowExecutor<TContext>(execution, context, this, m_ActivityFactory, m_ExecutionObserver, inputProvider);
+            var executor = new ResumeAfterWorkflowExecutor<TContext>(execution, context, this, m_ActivityFactory, m_ExecutionObserver, node, outputProvider);
             try
             {
                 accept(executor, node);
