@@ -4,21 +4,18 @@ namespace Inceptum.Workflow.Executors
 {
     internal class ResumeAfterWorkflowExecutor<TContext> : WorkflowExecutorBase<TContext>, IActivityOutputProvider
     {
-        private readonly string m_Node;
         private readonly IActivityOutputProvider m_OutputProvider;
         private readonly object m_Output;
 
-        public ResumeAfterWorkflowExecutor(Execution<TContext> execution, TContext context, INodesResolver<TContext> nodes, IActivityFactory factory, IExecutionObserver observer,  string node, object output) 
+        public ResumeAfterWorkflowExecutor(Execution<TContext> execution, TContext context, INodesResolver<TContext> nodes, IActivityFactory factory, IExecutionObserver observer,  object output) 
             : base(execution, context, nodes, factory, observer)
         {
-            m_Node = node;
             m_Output = output;
         }
 
-        public  ResumeAfterWorkflowExecutor(Execution<TContext> execution, TContext context, INodesResolver<TContext> nodes, IActivityFactory factory, IExecutionObserver observer, string node, IActivityOutputProvider outputProvider) 
+        public  ResumeAfterWorkflowExecutor(Execution<TContext> execution, TContext context, INodesResolver<TContext> nodes, IActivityFactory factory, IExecutionObserver observer, IActivityOutputProvider outputProvider) 
             : base(execution, context, nodes, factory, observer)
         {
-            m_Node = node;
             m_OutputProvider = outputProvider;
         }
 
@@ -39,7 +36,7 @@ namespace Inceptum.Workflow.Executors
 
         protected override ActivityExecution GetActivityExecution(IGraphNode<TContext> node)
         {
-            return Execution.ExecutingActivities.FindLast(ae => ae.Node.Equals(m_Node));
+            return Execution.ExecutingActivities.FindLast(ae => ae.Node.Equals(node.Name));
         }
     }
 }
