@@ -21,7 +21,7 @@ namespace Inceptum.Workflow.Executors
 
         protected override ActivityResult VisitNode(IGraphNode<TContext> node, Guid activityExecutionId, out object activityOutput)
         {
-            ExecutionObserver.ActivityStarted(activityExecutionId, node.Name, node.ActivityType, null);
+            ExecutionObserver.ActivityStarted(activityExecutionId, node.Name, node.ActivityType + " [FAKE]", null);
             return node.ActivitySlot.Complete(activityExecutionId, Factory, Context, m_OutputProvider ?? this, out activityOutput);
         }
 
