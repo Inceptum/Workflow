@@ -7,7 +7,7 @@ namespace Inceptum.Workflow.Executors
         private readonly IActivityOutputProvider m_OutputProvider;
         private readonly object m_Output;
 
-        public ResumeAfterWorkflowExecutor(Execution<TContext> execution, TContext context, INodesResolver<TContext> nodes, IActivityFactory factory, IExecutionObserver observer,  object output) 
+        public ResumeAfterWorkflowExecutor(Execution<TContext> execution, TContext context, INodesResolver<TContext> nodes, IActivityFactory factory, IExecutionObserver observer, object output) 
             : base(execution, context, nodes, factory, observer)
         {
             m_Output = output;
@@ -21,6 +21,7 @@ namespace Inceptum.Workflow.Executors
 
         protected override ActivityResult VisitNode(IGraphNode<TContext> node, Guid activityExecutionId, out object activityOutput)
         {
+            ExecutionObserver.ActivityStarted(activityExecutionId, node.Name, node.ActivityType, null);
             return node.ActivitySlot.Complete(activityExecutionId, Factory, Context, m_OutputProvider ?? this, out activityOutput);
         }
 
@@ -32,11 +33,6 @@ namespace Inceptum.Workflow.Executors
         protected override WorkflowExecutorBase<TContext> GetNextNodeVisitor()
         {
             return new WorkflowExecutor<TContext>(Execution,Context,Nodes,Factory,ExecutionObserver);
-        }
-
-        protected override ActivityExecution GetActivityExecution(IGraphNode<TContext> node)
-        {
-            return Execution.ExecutingActivities.FindLast(ae => ae.Node.Equals(node.Name));
         }
     }
 }
