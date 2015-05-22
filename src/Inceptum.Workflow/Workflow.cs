@@ -312,8 +312,8 @@ graph [ resolution=64];
             return Nodes[name].Activity<DelegateActivity<object, object>>(activityType, new { activityMethod, isInputSerializable = false }).WithInput(context => (object)context);
         }
 
-         public ISlotCreationHelper<TContext, DelegateActivity<TInput, TOutput>> DelegateNode<TInput, TOutput>(string name, Expression<Action<TInput>> method) 
-            where TInput : class where TOutput : class
+         public ISlotCreationHelper<TContext, DelegateActivity<TInput, object>> DelegateNode<TInput>(string name, Expression<Action<TInput>> method) 
+            where TInput : class
         
         {
             var methodCall = method.Body as MethodCallExpression;
@@ -323,9 +323,14 @@ graph [ resolution=64];
             {
                 activityType += " " + methodCall.Method.Name;
             }
-            var activityMethod = method.Compile();
+            Action<TInput> compiled = method.Compile();
+            Func<object,object> activityMethod = input =>
+            {
+                compiled((TInput) input);
+                return null;
+            };
 
-            return Nodes[name].Activity<DelegateActivity<TInput, TOutput>>(activityType, new { activityMethod, isInputSerializable = true});
+            return Nodes[name].Activity<DelegateActivity<TInput, object>>(activityType, new { activityMethod, isInputSerializable = true});
         }
     }
 
