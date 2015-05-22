@@ -311,6 +311,22 @@ graph [ resolution=64];
             };
             return Nodes[name].Activity<DelegateActivity<object, object>>(activityType, new { activityMethod, isInputSerializable = false }).WithInput(context => (object)context);
         }
+
+         public ISlotCreationHelper<TContext, DelegateActivity<TInput, TOutput>> DelegateNode<TInput, TOutput>(string name, Expression<Action<TInput>> method) 
+            where TInput : class where TOutput : class
+        
+        {
+            var methodCall = method.Body as MethodCallExpression;
+            string activityType = "DelegateActivity";
+
+            if (methodCall != null)
+            {
+                activityType += " " + methodCall.Method.Name;
+            }
+            var activityMethod = method.Compile();
+
+            return Nodes[name].Activity<DelegateActivity<TInput, TOutput>>(activityType, new { activityMethod, isInputSerializable = true});
+        }
     }
 
     public class DelegateActivity<TInput, TOutput> :ActivityBase<TInput, TOutput,Exception> where TInput : class where TOutput : class
