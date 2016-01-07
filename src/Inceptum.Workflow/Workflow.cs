@@ -24,12 +24,11 @@ namespace Inceptum.Workflow
         private readonly IActivityFactory  m_ActivityFactory;
         private readonly IExecutionObserver m_ExecutionObserver;
 
-        public Workflow(string name, IWorkflowPersister<TContext> persister, IActivityFactory  activityFactory = null,IExecutionObserver executionObserver=null )
+        public Workflow(IWorkflowPersister<TContext> persister, IActivityFactory  activityFactory = null,IExecutionObserver executionObserver=null )
         {
             m_ExecutionObserver = executionObserver;
             m_ActivityFactory = activityFactory ?? this;
             m_Persister = persister;
-            Name = name;
             m_Start = new GraphNode<TContext>("start");
             m_End = new GraphNode<TContext>("end");
             m_Fail = new GraphNode<TContext>("fail");
@@ -38,7 +37,6 @@ namespace Inceptum.Workflow
             registerNode(m_Fail);
         }
 
-        public string Name { get; set; }
 
 
         internal Dictionary<string, IGraphNode<TContext>> Nodes
@@ -89,7 +87,7 @@ namespace Inceptum.Workflow
 
         IGraphNode<TContext> INodesResolver<TContext>.this[string name]
         {
-            get { return m_Nodes[name]; }
+            get { return getNode(name); }
         }
 
         #endregion
@@ -261,7 +259,14 @@ graph [ resolution=64];
 
         public ISlotCreationHelper<TContext, TActivity> Node<TActivity>(string name, object activityCreationParams=null,string activityType=null) where TActivity : IActivityWithOutput<object, object, object>
         {
-            return Nodes[name].Activity<TActivity>(activityType??typeof(TActivity).Name, activityCreationParams);
+            return getNode(name).Activity<TActivity>(activityType??typeof(TActivity).Name, activityCreationParams);
+        }
+
+        private IGraphNode<TContext> getNode(string name)
+        {
+            if(!Nodes.ContainsKey(name))
+                throw new ConfigurationErrorsException(string.Format("Node '{0}' not found",name));
+            return Nodes[name];
         }
 
         public ISlotCreationHelper<TContext, DelegateActivity<TInput, TOutput>> DelegateNode<TInput, TOutput>(string name, Expression<Func<TInput, TOutput>> method) 
@@ -277,7 +282,7 @@ graph [ resolution=64];
             }
             var activityMethod = method.Compile();
 
-            return Nodes[name].Activity<DelegateActivity<TInput, TOutput>>(activityType, new { activityMethod, isInputSerializable = true});
+            return getNode(name).Activity<DelegateActivity<TInput, TOutput>>(activityType, new { activityMethod, isInputSerializable = true });
         }
 
         public IActivitySlot<TContext, object, TOutput, Exception> DelegateNode<TOutput>(string name, Expression<Func<TContext, TOutput>> method) where TOutput : class
@@ -291,7 +296,7 @@ graph [ resolution=64];
             }
             Func<TContext, TOutput> compiled = method.Compile();
             Func<object, TOutput> activityMethod = context => compiled((TContext)context);
-            return Nodes[name].Activity<DelegateActivity<object, TOutput>>(activityType, new { activityMethod, isInputSerializable = false }).WithInput(context => (object)context);
+            return getNode(name).Activity<DelegateActivity<object, TOutput>>(activityType, new { activityMethod, isInputSerializable = false }).WithInput(context => (object)context);
         }
 
         public IActivitySlot<TContext, object, object, Exception> DelegateNode(string name, Expression<Action<TContext>> method) 
@@ -309,7 +314,7 @@ graph [ resolution=64];
                 compiled((TContext) context);
                 return null;
             };
-            return Nodes[name].Activity<DelegateActivity<object, object>>(activityType, new { activityMethod, isInputSerializable = false }).WithInput(context => (object)context);
+            return getNode(name).Activity<DelegateActivity<object, object>>(activityType, new { activityMethod, isInputSerializable = false }).WithInput(context => (object)context);
         }
 
          public ISlotCreationHelper<TContext, DelegateActivity<TInput, object>> DelegateNode<TInput>(string name, Expression<Action<TInput>> method) 
@@ -330,7 +335,7 @@ graph [ resolution=64];
                 return null;
             };
 
-            return Nodes[name].Activity<DelegateActivity<TInput, object>>(activityType, new { activityMethod, isInputSerializable = true});
+            return getNode(name).Activity<DelegateActivity<TInput, object>>(activityType, new { activityMethod, isInputSerializable = true });
         }
     }
 

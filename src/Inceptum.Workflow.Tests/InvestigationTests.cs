@@ -44,7 +44,7 @@ namespace Inceptum.Workflow.Tests
         [Ignore]
         public void Test()
         {
-            var wf = new Workflow<JObject>("", new InMemoryPersister<JObject>());
+            var wf = new Workflow<JObject>(new InMemoryPersister<JObject>());
             wf.Configure(cfg => cfg.Do("node").End());
             wf.RemoteNode("node", i => i.RSBCheck());
             wf.RemoteNode("node", i => i.Test());

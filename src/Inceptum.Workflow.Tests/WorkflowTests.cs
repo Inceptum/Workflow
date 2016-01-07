@@ -63,7 +63,7 @@ namespace Inceptum.Workflow.Tests
         [ExpectedException(typeof (ConfigurationErrorsException), ExpectedMessage = "Node 'node1' references unknown node 'Not existing node'")]
         public void InvalidEdgeValidationTest()
         {
-            var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>());
+            var wf = new Workflow<List<string>>(new InMemoryPersister<List<string>>());
             wf.Configure(
                 cfg => cfg.Do("node1").ContinueWith("Not existing node"));
 
@@ -73,7 +73,7 @@ namespace Inceptum.Workflow.Tests
         [ExpectedException(typeof (ConfigurationErrorsException), ExpectedMessage = "Node 'node1' is not connected with any other node.")]
         public void NotTerminatingNodeHasNoEdgesValidationTest()
         {
-            var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>());
+            var wf = new Workflow<List<string>>(new InMemoryPersister<List<string>>());
             wf.Configure(cfg =>
                 cfg.Do("node1")
                 .WithBranch().Do("node2").End());
@@ -83,7 +83,7 @@ namespace Inceptum.Workflow.Tests
         [Test]
         public void MultipleEdgesFailureTest()
         {
-            var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>());
+            var wf = new Workflow<List<string>>(new InMemoryPersister<List<string>>());
             wf.Configure(cfg =>
                 cfg.Do("node1").ContinueWith("node2").End()
                 .WithBranch().Do("node2").End());
@@ -96,7 +96,7 @@ namespace Inceptum.Workflow.Tests
         [Test]
         public void MultipleEdgesWithNamedEdgesFailureTest()
         {
-            var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>());
+            var wf = new Workflow<List<string>>(new InMemoryPersister<List<string>>());
             wf.Configure(cfg =>
                 cfg.Do("node1").On("conditionName").DeterminedAs(x=>true).ContinueWith("node2").End()
                 .WithBranch().Do("node2").End());
@@ -109,7 +109,7 @@ namespace Inceptum.Workflow.Tests
         [Test]
         public void NoMatchingEdgesFailureTest()
         {
-            var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>());
+            var wf = new Workflow<List<string>>(new InMemoryPersister<List<string>>());
             wf.Configure(cfg =>
                 cfg.Do("node1")
                 .On("conditionName1").DeterminedAs(x=>false).ContinueWith("node2")
@@ -125,7 +125,7 @@ namespace Inceptum.Workflow.Tests
         [ExpectedException(typeof(ConfigurationErrorsException), ExpectedMessage = "Can not create node 'node1', node with this name already exists")]
         public void DuplicateNodeNameFailureTest()
         {
-            var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>());
+            var wf = new Workflow<List<string>>(new InMemoryPersister<List<string>>());
             wf.Configure(cfg =>
                 cfg.Do("node1").Do("node1").End());
 
@@ -134,7 +134,7 @@ namespace Inceptum.Workflow.Tests
         [Test]
         public void StraightExecutionFlowTest()
         {
-            var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>());
+            var wf = new Workflow<List<string>>(new InMemoryPersister<List<string>>());
             wf.Configure(cfg => cfg.Do("node1").Do("node2").End());
             wf.Node<TestActivity1>("node1").WithInput(list => list).ProcessOutput((context, output) => context.Add("TestActivity1"));
             wf.Node<TestActivity2>("node2").WithInput(list => list).ProcessOutput((context, output) => context.Add("TestActivity2"));
@@ -153,7 +153,7 @@ namespace Inceptum.Workflow.Tests
                 o =>
                     o.ActivityStarted(Arg<Guid>.Is.Anything, Arg<string>.Is.Equal("node1"),
                         Arg<string>.Is.Equal("TestActivity1"), Arg<object>.Is.Anything));
-            var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>(), null, observer);
+            var wf = new Workflow<List<string>>(new InMemoryPersister<List<string>>(), null, observer);
             wf.Configure(cfg => cfg.Do("node1").Do("node2").End());
             wf.Node<TestActivity1>("node1").WithInput(list => { throw new Exception("FAIL!!!");}).ProcessOutput((context, output) => context.Add("TestActivity1"));
             wf.Node<TestActivity2>("node2").WithInput(list => list).ProcessOutput((context, output) => context.Add("TestActivity2"));
@@ -167,7 +167,7 @@ namespace Inceptum.Workflow.Tests
         [Test]
         public void WorkflowCorruptsOnActivityFailWithoutExplicitFailBranchTest()
         {
-            var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>());
+            var wf = new Workflow<List<string>>(new InMemoryPersister<List<string>>());
             wf.Configure(cfg => cfg.Do("node1").Do("node2").End());
             wf.Node<TestActivity1>("node1").WithInput(list => list).ProcessOutput((context, output) => context.Add("TestActivity1"));
             wf.Node<FailingTestActivity>("node2").WithInput(list => list).ProcessOutput((context, output) => context.Add("FailingTestActivity"));
@@ -180,7 +180,7 @@ namespace Inceptum.Workflow.Tests
         [Test]
         public void ExplicitFailBranchTest()
         {
-            var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>());
+            var wf = new Workflow<List<string>>(new InMemoryPersister<List<string>>());
             wf.Configure(cfg => cfg.Do("node1").Do("node2").Fail());
             wf.Node<TestActivity1>("node1").WithInput(list => list).ProcessOutput((context, output) => context.Add("TestActivity1"));
             wf.Node<TestActivity2>("node2").WithInput(list => list).ProcessOutput((context, output) => context.Add("TestActivity2"));
@@ -196,7 +196,7 @@ namespace Inceptum.Workflow.Tests
         [Test]
         public void ExecutionFlowWithContextConditionsTest()
         {
-            var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>());
+            var wf = new Workflow<List<string>>(new InMemoryPersister<List<string>>());
             int branchSelector = 0;
             wf.Configure(cfg => cfg.Do("node1")
                 .On("constraint1").DeterminedAs(list => branchSelector == 0).ContinueWith("node2")
@@ -241,7 +241,7 @@ namespace Inceptum.Workflow.Tests
         [Test]
         public void ExecutionFlowWithContextConditionAsFirstStepTest()
         {
-            var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>());
+            var wf = new Workflow<List<string>>(new InMemoryPersister<List<string>>());
             int branchSelector = 0;
             wf.Configure(cfg => cfg.On("constraint1").DeterminedAs(list => branchSelector == 0).ContinueWith("node2")
                 .On("constraint2").DeterminedAs(list => branchSelector == 1).End()
@@ -266,7 +266,7 @@ namespace Inceptum.Workflow.Tests
         [Test]
         public void OnFailTest()
         {
-            var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>());
+            var wf = new Workflow<List<string>>(new InMemoryPersister<List<string>>());
             wf.Configure(cfg => 
                                 cfg.Do("node1").OnFail("node2")
                                 .WithBranch().Do("node2").End()
@@ -295,7 +295,7 @@ namespace Inceptum.Workflow.Tests
         [Test]
         public void ResumeTest()
         {
-            var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>());
+            var wf = new Workflow<List<string>>(new InMemoryPersister<List<string>>());
             wf.Configure(cfg => cfg.Do("node1").Do("node2").Do("node3").End());
 
             wf.Node<TestActivity1>("node1").WithInput(list => list).ProcessOutput((context, output) => context.Add("TestActivity1"));
@@ -329,7 +329,7 @@ namespace Inceptum.Workflow.Tests
         [Test]
         public void ResumeFromTest()
         {
-            var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>());
+            var wf = new Workflow<List<string>>(new InMemoryPersister<List<string>>());
             wf.Configure(cfg => cfg.Do("node1").Do("node2").Do("node3").Do("node4").End());
 
 
@@ -358,7 +358,7 @@ namespace Inceptum.Workflow.Tests
         [Test]
         public void ResumeFromWithNewInputTest()
         {
-            var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>());
+            var wf = new Workflow<List<string>>(new InMemoryPersister<List<string>>());
             wf.Configure(cfg => cfg.Do("node1").Do("node2").Do("node3").Do("node4").End());
             
 
@@ -382,7 +382,7 @@ namespace Inceptum.Workflow.Tests
         {
             var inputProvider = MockRepository.GenerateMock<IActivityInputProvider>();
             inputProvider.Expect(p => p.GetInput<List<string>>()).Repeat.Once().Return(new[] {"77"}.ToList());
-            var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>());
+            var wf = new Workflow<List<string>>(new InMemoryPersister<List<string>>());
             wf.Configure(cfg => cfg.Do("node1").Do("node2").Do("node3").Do("node4").End());
             
 
@@ -423,7 +423,7 @@ namespace Inceptum.Workflow.Tests
             var outputProvider = MockRepository.GenerateMock<IActivityOutputProvider>();
             outputProvider.Expect(p => p.GetOuput<List<string>>()).Repeat.Once().Return(new[] {"77"}.ToList());
             var inMemoryPersister = new InMemoryPersister<List<string>>();
-            var wf = new Workflow<List<string>>("", inMemoryPersister, null, observer);
+            var wf = new Workflow<List<string>>(inMemoryPersister, null, observer);
             wf.Configure(cfg => cfg.Do("node1").Do("node2").Do("node3").Do("node4").End());
 
             wf.Node<TestActivity1>("node1").WithInput(list => new List<string>(new[]{"1"})).ProcessOutput((context, output) => context.AddRange(output));
@@ -445,38 +445,11 @@ namespace Inceptum.Workflow.Tests
             Assert.That(execution.State, Is.EqualTo(WorkflowState.Complete), "Execution was not complete after async activity was successfully resumed and returned Succeeded status\r\n\r\nERROR:\r\n"+execution.Error);
             Assert.That(wfContext, Is.EquivalentTo(new[] {"1", "77", "3", "4"}), "Wrong activities were executed");
         }
-/*
-        [Test]
-        public void GenericActivityTest()
-        {
-          
-            FakeExecutor executor = new FakeExecutor();
 
-            var wf = new Workflow<dynamic>("", new InMemoryPersister<dynamic>(), activityExecutor: executor);
-            wf.Configure(cfg => cfg
-                .Do("CardPayActivity", "Pay", o => new {o.CardNumber}, (o, output) => o.IsPayed = output.IsPayed)
-                .Do("SendSmsActivity", "SendSMS", o => new {o.Phone}, (o, output) => o.IsSmsSent = output.IsSmsSent)
-                .End());
-            dynamic wfContext = new JObject();
-            wfContext.CardNumber = "1234 2546 7897 4566";
-            wfContext.Phone = "+79265603326";
-            wfContext.IsPayed = false;
-            wfContext.IsSmsSent = false;
-
-            var execution = wf.Run(wfContext);
-            wf.Resume(wfContext, new ActivityState {NodeName = "Pay", Status = ActivityResult.Succeeded, Values = JObject.Parse("{'IsPayed':true}")});
-            wf.Resume(wfContext, new ActivityState {NodeName = "SendSMS", Status = ActivityResult.Succeeded, Values = JObject.Parse("{'IsSmsSent':true}")});
-            Assert.That(execution.State, Is.EqualTo(WorkflowState.Complete));
-            Assert.That(wfContext.IsPayed == true, Is.True, "Wrong activities were executed");
-            Assert.That(wfContext.IsSmsSent == true, Is.True, "Wrong activities were executed");
-            Assert.That(executor.Input.Count, Is.EqualTo(2), "Executor was called with wrong data");
-
-        }
- */
         [Test]
         public void DelegateActivityTest()
         {
-            var wf = new Workflow<JObject>("", new InMemoryPersister<JObject>() );
+            var wf = new Workflow<JObject>(new InMemoryPersister<JObject>() );
             wf.Configure(cfg => cfg.Do("node").End());
             wf.DelegateNode<string, string>("node", x => activityMethod(x))
                 .WithInput(context => (string)(((dynamic)context).Input))
@@ -501,7 +474,7 @@ namespace Inceptum.Workflow.Tests
         public void ExecutionObserverStraightExecutionFlowTest()
         {
             StubExecutionObserver eo = new StubExecutionObserver();
-            var wf = new Workflow<List<string>>("", new InMemoryPersister<List<string>>(), null, eo);
+            var wf = new Workflow<List<string>>(new InMemoryPersister<List<string>>(), null, eo);
             wf.Configure(cfg => cfg.Do("node1").Do("node2").End());
             wf.Node<TestActivity1>("node1").WithInput(list => list).ProcessOutput((context, output) => context.Add("TestActivity1"));
             wf.Node<TestActivity2>("node2").WithInput(list => list).ProcessOutput((context, output) => context.Add("TestActivity2"));
