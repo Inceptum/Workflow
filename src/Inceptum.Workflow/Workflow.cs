@@ -37,6 +37,17 @@ namespace Inceptum.Workflow
             registerNode(m_Fail);
         }
 
+        [Obsolete("Name is not required for workflow. Will be removed with on next version change.")]
+        public Workflow(string name, IWorkflowPersister<TContext> persister, IActivityFactory activityFactory = null, IExecutionObserver executionObserver = null)
+            : this(persister, activityFactory, executionObserver)
+        {
+            if (name == null) throw new ArgumentNullException("name");
+
+            Name = name;
+        }
+
+        [Obsolete("Name is not required for workflow. Will be removed with on next version change.")]
+        public string Name { get; set; }
 
 
         internal Dictionary<string, IGraphNode<TContext>> Nodes
